@@ -1,0 +1,10 @@
+Program Name,ole5
+Description,Main Pump
+Employee ID,1437
+Comp Set,4500
+Input Factor,14
+Input Factor Type,cu/in
+Serial Number,37852
+Customer ID,123456
+
+Date,Time,S1,SP,TP,Cycle,Cycle Timer,LCSetpoint,LC Regulate,Step,F1,F2,F3,T1,T3,P1,P2,P3,P4,P5,Theo Flow,Efficiency

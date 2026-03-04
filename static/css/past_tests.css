@@ -1,0 +1,130 @@
+/* /* body {
+    font-family: Arial, sans-serif;
+    background-color: #f8f9fa; /* a light grey background
+} */
+
+/* h1 {
+    margin-top: 20px;
+    font-size: 3.5em;
+} */ */
+
+nav.navbar {
+    margin-bottom: 20px;
+}
+
+/* Add any additional global styling here
+
+
+table.table {
+    background-color: var(--background-container);
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+table.table thead th {
+    background-color: #333333;
+    color: var(--text-light);
+}
+
+table.table tbody tr:nth-child(odd) {
+    background-color: var(--battleship-gray);
+    color: black;
+}
+
+table.table th, table.table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+table.table th {
+    font-size: 2em;
+}
+
+table.table td {
+    font-size: 1.5em;
+}
+
+.table .btn {
+    font-size: 16px;
+    padding: 10px 20px;
+}
+*/
+.date-modified-cell {
+    color: #555;
+    padding: 5px 10px;
+}
+
+.btn-primary {
+    background-color: #858786;
+    border-color: #858786;
+}
+
+.btn-primary:hover {
+    background-color: #858786bb;
+    border-color: #858786bb;
+    box-shadow: 0 0 8px var(--battleship-gray);
+}
+
+.btn-danger:hover {
+    border-color: red;
+    box-shadow: 0 0 8px rgb(255, 0, 0);
+}
+
+.table tr:nth-child(odd) {
+    background-color: var(--background-container);
+}
+
+.table tr:nth-child(even) {
+    background-color: var(--hover-background);
+}
+
+.table td {
+    padding: 25px;
+}
+
+.nav-tabs {
+    border-bottom: 4px solid #EB1C23;
+}
+
+.nav-tabs .nav-link.active {
+    color: #ffffff;
+    background-color: #EB1C23;
+    border-color: #EB1C23;
+    font-weight: 700;
+    font-size: 1.4rem;
+}
+
+.nav-tabs .nav-link {
+    border: 1px solid transparent;
+    -moz-border-radius: 0px;
+    -webkit-border-radius: 10px 10px 0px 0px;
+    border-radius: 10px 10px 0px 0px; 
+    color: #ffffff;
+    border-color: #EB1C23;
+    font-weight: 700;
+    font-size: 1.4rem;
+    box-shadow: 0 0 12px rgb(255, 0, 0);
+    transition: box-shadow 0.3s ease;
+}
+
+.nav-tabs .nav-link:hover {
+    box-shadow: 0 0 8px var(--battleship-gray);
+}
+
+.table td, .table th {
+    font-size: 1.1rem;
+}
+
+.btn {
+    width: 100%;
+    margin: 10px;
+    padding: 5px;
+}
+
+.ml-2 {
+    margin-left: .1px;
+}
+
+.admin-only {
+    display: none;
+}

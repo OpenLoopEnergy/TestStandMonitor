@@ -1,0 +1,6 @@
+pandas
+xlsxwriter
+python-can
+python-dotenv
+flask
+wexpect

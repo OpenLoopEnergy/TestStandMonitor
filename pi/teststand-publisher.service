@@ -1,0 +1,17 @@
+[Unit]
+Description=Test Stand CAN Publisher
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/teststand/pi
+ExecStart=/usr/bin/python3 can_publisher.py
+Environment=BACKEND_WS_URL=wss://your-app.up.railway.app/ws/pi
+Environment=CAN_CHANNEL=can0
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

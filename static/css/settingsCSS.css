@@ -1,0 +1,76 @@
+body {
+    font-family: Arial, sans-serif;
+}
+h1 {
+    color: #E12E34;
+}
+.form-container {
+    max-width: 900px;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+}
+.form-group label {
+    font-weight: bold;
+}
+.dvc-value {
+    color: #E12E34;
+    font-weight: normal;
+}
+.row > .col-md-4 {
+    margin-bottom: 15px;
+}
+.navbar {
+    margin-bottom: 20px;
+}
+.button-container {
+    margin: 20px 0;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+.btn-custom {
+    width: 150px;
+    height: 50px;
+    font-size: 16px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-start {
+    background-color: #28a745; /*green*/
+    color: #fff;
+}
+.btn-stop {
+    background-color: #dc3545; /*red*/
+    color: #fff;
+}
+.btn-emergency {
+    background-color: #ffc107; /*yellow*/
+    color: #000;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+}
+.btn-emergency.active {
+    background-color: #000;
+    color: #fff;
+    border: 2px solid #dc3545;
+    transform: scale(1.1);
+}
+.btn-emergency:hover {
+    background-color: #000;
+    color: #fff;
+    transform: scale(1.1);
+    text-transform: uppercase;
+}
+.btn-custom:focus,
+.btn-emergency:focus,
+.btn-start:focus,
+.btn-stop:focus {
+    outline: none;
+    box-shadow: none;
+}

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Past Tests</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="{{ url_for('static', filename='css/indexCSS.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/past_tests.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <a class ="navbar-brand">
+            <img src="{{ url_for('static', filename='images/company-logo3.png') }}"
+                 alt="Company Logo"
+                 height="50">
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"         aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('index') }}">Data Table</a>
+                </li>
+                <!-- <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('settings') }}">EE-MEMORY</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('testing') }}">Debugging</a>
+                </li> -->
+                <li class="nav-item active">
+                    <a class="nav-link" href="{{ url_for('past_tests') }}">Past Tests</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <div id="admin-indicator" style="text-align: center; font-weight: bold; color: red; display: none; padding-top: 10px;">
+        Admin Mode
+    </div>
+    
+    <div class="container mt-4">
+        <h1 class="text-center">Past Tests</h1>
+        <p class="text-center">Below you can find previously exported test results and database backups.</p>
+        
+        <!-- Nav tabs -->
+        <ul class="nav nav-tabs" id="pastTestsTab" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="test-results-tab" data-toggle="tab" href="#test-results" role="tab" aria-controls="test-results" aria-selected="true">Test Results</a>
+            </li>
+            <li class="nav-item admin-only" id="db-backups-tab-container">
+                <a class="nav-link" id="db-backups-tab" data-toggle="tab" href="#db-backups" role="tab" aria-controls="db-backups" aria-selected="false">Database Backups</a>
+            </li>
+        </ul>
+
+        <!-- Tab panes -->
+        <div class="tab-content">
+            <!-- Test Results Tab -->
+            <div class="tab-pane fade show active mt-3" id="test-results" role="tabpanel" aria-labelledby="test-results-tab">
+                <table class="table table-striped table-bordered custom-table">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Filename</th>
+                            <th>Date Modified</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for file_info in files %}
+                        <tr>
+                            <td>{{ file_info.filename }}</td>
+                            <td>{{ file_info.modified_time }}</td>
+                            <td>
+                                <a class="btn btn-sm btn-primary" href="{{ url_for('download_test', filename=file_info.filename) }}">Download</a>
+                                <button class="btn btn-sm btn-danger ml-2 admin-only delete-button" onclick="confirmDeleteFile('{{ file_info.filename }}')">Delete</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Database Backups Tab -->
+            <div class="tab-pane fade mt-3" id="db-backups" role="tabpanel" aria-labelledby="db-backups-tab">
+                <table class="table table-striped table-bordered custome-table">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Filename</th>
+                            <th>Date Modified</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for db_file in db_files %}
+                        <tr>
+                            <td>{{ db_file.filename }}</td>
+                            <td>{{ db_file.modified_time }}</td>
+                            <td>
+                                <a class="btn btn-sm btn-primary" href="{{ url_for('download_test', filename=db_file.filename) }}">Download</a>
+                                <button class="btn btn-sm btn-danger ml-2 admin-only delete-button" onclick="confirmDeleteFile('{{ db_file.filename }}')">Delete</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+   
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+
+    <!-- <script>
+    function confirmDeleteFile(filename) {
+        const confirmed = confirm(`Are you sure you want to delete the file "${filename}"? This action cannot be undone.`);
+        if (confirmed) {
+            fetch(`/delete_file/${encodeURIComponent(filename)}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('File deleted successfully.');
+                    location.reload(); // Reload the page to update the file list
+                } else {
+                    alert('Failed to delete file: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting file:', error);
+                alert('An error occurred while deleting the file.');
+            });
+        }
+    }
+
+    // On page load, update admin-only elements based on the isAdmin flag
+    document.addEventListener('DOMContentLoaded', function() {
+        const isAdmin = sessionStorage.getItem('isAdmin') === 'true';
+        // If not admin, hide all elements with the class "admin-only"
+        if(!isAdmin) {
+            document.querySelectorAll('.admin-only').forEach(elem => {
+                elem.style.display = 'none';
+            });
+        } else {
+            // Otherwise, ensure they are visible
+            document.querySelectorAll('.admin-only').forEach(elem => {
+                elem.style.display = '';
+            });
+        }
+    });
+    </script> -->
+
+</body>
+</html>

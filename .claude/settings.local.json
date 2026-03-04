@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create vite@latest . -- --template react-ts --yes)",
+      "Bash(npm create vite@latest . --template react-ts)",
+      "Bash(npm create vite@latest teststandfrontend -- --template react-ts)",
+      "Bash(npm install)",
+      "Bash(npm install tailwindcss @tailwindcss/vite chart.js react-chartjs-2 chartjs-adapter-date-fns date-fns react-router-dom)",
+      "Bash(npm run build)",
+      "Bash(head -30 \"\\(2026-02-18_11-15-55\\)_log_data.csv\")",
+      "Bash(python -c \"import sqlite3; conn = sqlite3.connect\\(''settings.db''\\); rows = conn.execute\\(''SELECT * FROM AppSettings''\\).fetchall\\(\\); [print\\(r\\) for r in rows]; conn.close\\(\\)\")",
+      "Bash(python -c \"import sqlite3; conn = sqlite3.connect\\(''dev.db''\\); rows = conn.execute\\(''SELECT * FROM app_settings''\\).fetchall\\(\\); [print\\(r\\) for r in rows]; conn.close\\(\\)\")",
+      "Bash(python -c \":*)"
+    ]
+  }
+}
