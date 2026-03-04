@@ -1,6 +1,7 @@
-pandas
-xlsxwriter
-python-can
-python-dotenv
-flask
-wexpect
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+sqlalchemy>=2.0.0
+python-dotenv>=1.0.0
+pandas>=2.0.0
+xlsxwriter>=3.1.0
+websockets>=12.0
