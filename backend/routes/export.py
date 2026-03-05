@@ -7,10 +7,12 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from backend.db.database import get_db
 from backend.db.models import TestLog, AppSettings
+from backend.services import data_store
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -97,6 +99,17 @@ def export_data(db: Session = Depends(get_db)):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         filename=excel_filename,
     )
+
+
+class DebugModeRequest(BaseModel):
+    enabled: bool
+
+
+@router.post("/set_debug_mode")
+async def set_debug_mode(body: DebugModeRequest):
+    data_store.debug_mode = body.enabled
+    await data_store.update({"debug_mode": body.enabled})
+    return {"debug_mode": data_store.debug_mode}
 
 
 @router.post("/clear_data_table")

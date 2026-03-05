@@ -10,6 +10,7 @@
     { "source": "/past_tests",            "destination": "https://web-production-4e718.up.railway.app/past_tests" },
     { "source": "/download_test/:filename", "destination": "https://web-production-4e718.up.railway.app/download_test/:filename" },
     { "source": "/delete_file/:filename", "destination": "https://web-production-4e718.up.railway.app/delete_file/:filename" },
+    { "source": "/set_debug_mode",        "destination": "https://web-production-4e718.up.railway.app/set_debug_mode" },
     { "source": "/health",                "destination": "https://web-production-4e718.up.railway.app/health" },
     { "source": "/(.*)",                  "destination": "/index.html" }
   ]

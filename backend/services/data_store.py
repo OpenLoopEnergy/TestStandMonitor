@@ -19,7 +19,11 @@ latest: dict[str, Any] = {
     "f1": 0, "f2": 0, "f3": 0,
     "p1": 0, "p2": 0, "p3": 0, "p4": 0, "p5": 0,
     "pi_connected": False,
+    "debug_mode": False,
 }
+
+# Debug logging mode — when True, logs every tick in Automatic mode regardless of trending
+debug_mode: bool = False
 
 # All active frontend WebSocket connections
 frontend_connections: set[Any] = set()

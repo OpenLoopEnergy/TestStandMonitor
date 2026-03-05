@@ -13,13 +13,15 @@ from backend.services import data_store
 logger = logging.getLogger(__name__)
 
 _INTERVAL_SECONDS = 5
+_DEBUG_INTERVAL_SECONDS = 2
 
 
 async def run_logger():
     """Runs forever as a FastAPI background task (lifespan)."""
-    logger.info("CSV logger started — interval: %ds", _INTERVAL_SECONDS)
+    logger.info("CSV logger started — interval: %ds normal / %ds debug", _INTERVAL_SECONDS, _DEBUG_INTERVAL_SECONDS)
     while True:
-        await asyncio.sleep(_INTERVAL_SECONDS)
+        interval = _DEBUG_INTERVAL_SECONDS if data_store.debug_mode else _INTERVAL_SECONDS
+        await asyncio.sleep(interval)
         try:
             await _log_tick()
         except Exception:
@@ -29,8 +31,14 @@ async def run_logger():
 async def _log_tick():
     snapshot = data_store.latest.copy()
 
-    if snapshot.get("trending") != 1:
-        return  # Not in a trending/logging state
+    if data_store.debug_mode:
+        # Debug: log whenever in Automatic mode (pb4 == 0)
+        if snapshot.get("pb4", 1) != 0:
+            return
+    else:
+        # Normal: only log when trending
+        if snapshot.get("trending") != 1:
+            return
 
     from backend.db.database import SessionLocal
     from backend.db.models import TestLog

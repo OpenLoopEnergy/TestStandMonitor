@@ -90,35 +90,10 @@ def process_csv_to_excel_from_file(file_path):
         # if pd.notna(f1_median) and f1_median > 200:
         #     df["F1"] = df["F1"] * 0.01
             
-        # ── Filtering ──────────────────────────────────────────────────
-        # 1. Base filter: TP at full speed and S1 above minimum threshold
-        # 2. Ramp filter: exclude rows where Step indicates a ramp-up or
-        #    ramp-down state so only steady-state data appears in the output
-        ramp_keywords = ["Ramp Up", "Ramp Down"]
-        
-        # Build a boolean mask for ramp rows (safe even if Step column is missing)
-        if "Step" in df.columns:
-            is_ramp = df["Step"].astype(str).str.contains(
-                "|".join(ramp_keywords), case=False, na=False
-            )
-        else:
-            is_ramp = pd.Series(False, index=df.index)
-        
-        df_filtered = df[
-            (df["TP"] == 1000) & (df["S1"] > 900) & (~is_ramp)
-        ].reset_index(drop=True)
+        # Use all rows — no filtering
+        df_filtered = df.reset_index(drop=True)
         if df_filtered.empty:
-            tp_counts = df["TP"].value_counts().to_dict()
-            s1_stats = df["S1"].describe().to_dict()
-            cycle_timer_counts = df["Cycle Timer"].value_counts().to_dict()
-            sample_rows = df.head(5).to_dict(orient="records")
-            raise ValueError(
-                "No data rows after filtering (TP==1000, S1>900, Cycle Timer==0). Cannot generate Excel.\n"
-                f"TP value counts: {tp_counts}\n"
-                f"S1 stats: {s1_stats}\n"
-                f"Cycle Timer value counts: {cycle_timer_counts}\n"
-                f"Sample rows: {sample_rows}"
-            )
+            raise ValueError("No data rows to export.")
         
         # Helpers
         def column_letter(idx: int) -> str:
@@ -231,7 +206,7 @@ def process_csv_to_excel_from_file(file_path):
                     }
                 )
                 
-                chart.set_title({"name": "Efficiency Percentage (Filtered)"})
+                chart.set_title({"name": "Efficiency Percentage"})
                 chart.set_x_axis({"name": "Index"})
                 chart.set_y_axis({"name": "Efficiency (%)", "min": 0, "max": 1.1, "major_unit": 0.1})
                 

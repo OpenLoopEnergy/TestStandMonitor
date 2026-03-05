@@ -38,6 +38,7 @@ export interface LiveData {
   theo_flow?: number
   efficiency?: number
   pi_connected?: boolean
+  debug_mode?: boolean
 }
 
 /** A single historical data point for the signal chart. */

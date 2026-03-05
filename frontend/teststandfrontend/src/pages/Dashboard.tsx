@@ -45,7 +45,7 @@ export default function Dashboard() {
   const piDisconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const ADMIN_SESSION_KEY = 'teststand_admin'
-  const LOGO_CLICK_WINDOW_MS = 3000
+  const LOGO_CLICK_WINDOW_MS = 5000
   const LOGO_CLICK_REQUIRED = 10
   const [isAdmin, setIsAdmin] = useState<boolean>(
     () => sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true'
@@ -94,6 +94,14 @@ export default function Dashboard() {
     const id = setTimeout(() => setLogoBounce(false), 600)
     return () => clearTimeout(id)
   }, [logoBounce])
+
+  async function handleDebugToggle() {
+    await fetch('/set_debug_mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: !data.debug_mode }),
+    })
+  }
 
   async function doClear() {
     try {
@@ -248,7 +256,8 @@ export default function Dashboard() {
       <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 shrink-0">
         <div className="flex items-center gap-4">
           <div
-            className={`bg-white rounded-md px-3 py-1 cursor-pointer select-none${logoBounce ? ' logo-bounce' : ''}`}
+            className={`bg-white rounded-md px-3 py-1 cursor-pointer select-none outline-none${logoBounce ? ' logo-bounce' : ''}`}
+            style={{ WebkitTapHighlightColor: 'transparent' }}
             onClick={handleLogoClick}
             title={isAdmin ? 'Admin mode active — click 10× to deactivate' : ''}
           >
@@ -261,6 +270,18 @@ export default function Dashboard() {
             <span className="text-xs px-2 py-1 rounded-full font-bold bg-amber-900/60 text-amber-300 border border-amber-700/50">
               Admin
             </span>
+          )}
+          {isAdmin && (
+            <button
+              onClick={handleDebugToggle}
+              className={`text-xs px-2 py-1 rounded-full font-bold border transition-colors ${
+                data.debug_mode
+                  ? 'bg-orange-900/60 text-orange-300 border-orange-700/50'
+                  : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
+              }`}
+            >
+              {data.debug_mode ? '● Debug' : '○ Debug'}
+            </button>
           )}
           {/* Mode — prominent */}
           <span className={`text-sm px-3 py-1 rounded-full font-bold border ${
