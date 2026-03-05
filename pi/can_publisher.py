@@ -67,7 +67,7 @@ async def main():
     while True:
         try:
             logger.info("Connecting to backend at %s", BACKEND_WS_URL)
-            async with websockets.connect(BACKEND_WS_URL, ping_interval=10, ping_timeout=8) as ws:
+            async with websockets.connect(BACKEND_WS_URL, ping_interval=None) as ws:
                 logger.info("WebSocket connected — streaming CAN data")
                 await publish_can_frames(ws)
         except (websockets.WebSocketException, OSError) as e:

@@ -65,8 +65,9 @@ export default function Dashboard() {
   }
 
   // Detect Manual → Automatic transition and show the clear prompt
+  // Only trigger once Pi is connected to avoid false positives on page load
   useEffect(() => {
-    if (data.pb4 === 0 && prevPb4.current === 1) {
+    if (data.pi_connected && data.pb4 === 0 && prevPb4.current === 1) {
       setCountdown(AUTO_CLEAR_SECONDS)
       setShowClearModal(true)
     }
