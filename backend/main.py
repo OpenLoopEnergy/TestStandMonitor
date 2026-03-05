@@ -92,7 +92,7 @@ async def ws_pi(websocket: WebSocket):
 
     async def send_keepalive():
         while True:
-            await asyncio.sleep(25)
+            await asyncio.sleep(15)
             try:
                 await websocket.send_json({"type": "keepalive"})
             except Exception:

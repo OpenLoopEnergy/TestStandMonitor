@@ -13,7 +13,6 @@ import asyncio
 import json
 import logging
 import os
-import time
 
 import can
 import websockets
@@ -45,10 +44,12 @@ async def publish_can_frames(ws):
             pass
 
     drain_task = asyncio.create_task(drain_incoming())
+    loop = asyncio.get_event_loop()
 
     try:
         while True:
-            msg = bus.recv(timeout=10)
+            # Run blocking bus.recv() in a thread so the event loop stays free
+            msg = await loop.run_in_executor(None, lambda: bus.recv(timeout=1))
             if msg is None:
                 continue  # Timeout — keep waiting
 
