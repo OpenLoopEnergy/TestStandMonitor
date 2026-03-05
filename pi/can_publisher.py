@@ -36,6 +36,16 @@ async def publish_can_frames(ws):
     bus = can.interface.Bus(channel=CAN_CHANNEL, bustype="socketcan")
     logger.info("Connected to CAN interface on %s", CAN_CHANNEL)
 
+    async def drain_incoming():
+        """Discard any messages sent by the backend (e.g. keepalives)."""
+        try:
+            async for _ in ws:
+                pass
+        except Exception:
+            pass
+
+    drain_task = asyncio.create_task(drain_incoming())
+
     try:
         while True:
             msg = bus.recv(timeout=10)
@@ -60,6 +70,7 @@ async def publish_can_frames(ws):
     except can.CanError as e:
         logger.error("CAN bus error: %s", e)
     finally:
+        drain_task.cancel()
         bus.shutdown()
 
 

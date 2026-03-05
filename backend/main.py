@@ -83,10 +83,22 @@ async def ws_pi(websocket: WebSocket):
     """
     The Raspberry Pi connects here and streams decoded CAN frames as JSON.
     Frame format: {"type": "frame", "data": {"s1": 1200, "tp": 1000, ...}}
+    A keepalive is sent to the Pi every 25s to prevent Railway's proxy from
+    timing out the connection due to no outbound traffic.
     """
     await websocket.accept()
     logger.info("Pi connected from %s", websocket.client)
     await data_store.update({"pi_connected": True})
+
+    async def send_keepalive():
+        while True:
+            await asyncio.sleep(25)
+            try:
+                await websocket.send_json({"type": "keepalive"})
+            except Exception:
+                break
+
+    keepalive_task = asyncio.create_task(send_keepalive())
 
     try:
         while True:
@@ -100,6 +112,7 @@ async def ws_pi(websocket: WebSocket):
     except WebSocketDisconnect:
         logger.warning("Pi disconnected")
     finally:
+        keepalive_task.cancel()
         await data_store.update({"pi_connected": False})
 
 
