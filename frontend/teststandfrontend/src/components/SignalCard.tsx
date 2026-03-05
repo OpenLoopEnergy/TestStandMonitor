@@ -37,8 +37,8 @@ export function SignalCard({ label, value, signal, active, onClick, compact, cla
         className,
       ].join(' ')}
     >
-      <span className="text-gray-400 font-medium uppercase tracking-wide text-[9px] leading-none">{label}</span>
-      <span className={`font-mono font-semibold text-white ${compact ? 'text-xs mt-0.5' : ''}`}>{value}</span>
+      <span className="text-white/60 font-medium uppercase tracking-wide text-[11px] leading-none">{label}</span>
+      <span className={`font-mono font-bold text-white ${compact ? 'text-sm mt-0.5' : 'text-base'}`}>{value}</span>
     </div>
   )
 }

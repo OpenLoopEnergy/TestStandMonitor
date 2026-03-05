@@ -39,10 +39,10 @@ export default function Dashboard() {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
   const [showClearModal, setShowClearModal] = useState(false)
   const [countdown, setCountdown] = useState(AUTO_CLEAR_SECONDS)
-  const prevPb4 = useRef<number>(0)
+  const prevPb4 = useRef<number>(1)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const isAutomatic = data.pb4 === 1
+  const isAutomatic = data.pb4 === 0
 
   const f1 = data.f1 * 0.01
   const theoFlow = inputFactor > 0 ? (data.s1 * inputFactor) / 231 : 0
@@ -66,7 +66,7 @@ export default function Dashboard() {
 
   // Detect Manual → Automatic transition and show the clear prompt
   useEffect(() => {
-    if (data.pb4 === 1 && prevPb4.current === 0) {
+    if (data.pb4 === 0 && prevPb4.current === 1) {
       setCountdown(AUTO_CLEAR_SECONDS)
       setShowClearModal(true)
     }
@@ -234,7 +234,7 @@ export default function Dashboard() {
           </span>
           <a
             href="/past-tests"
-            className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg font-medium transition-colors"
+            className="text-sm bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg font-semibold transition-colors"
           >
             Past Tests
           </a>
@@ -249,7 +249,7 @@ export default function Dashboard() {
 
           {/* System state */}
           <div className="shrink-0">
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5">System State</p>
+            <p className="text-xs text-white/50 uppercase tracking-widest mb-1.5">System State</p>
             <div className="grid grid-cols-2 gap-1.5">
               <SignalCard label="SP"       value={`${data.sp} RPM`} />
               <SignalCard label="TP"       value={tp_pct} />
@@ -266,7 +266,7 @@ export default function Dashboard() {
 
           {/* Sensors — fills remaining height, rows distributed evenly */}
           <div className="flex-1 flex flex-col min-h-0 gap-1">
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest shrink-0">Sensors</p>
+            <p className="text-xs text-white/50 uppercase tracking-widest shrink-0">Sensors</p>
             <div className="flex-1 grid grid-cols-2 gap-1.5 [grid-auto-rows:1fr]">
               {([
                 ['S1',         `${data.s1} RPM`],
@@ -301,7 +301,7 @@ export default function Dashboard() {
         <div className="flex-1 flex flex-col gap-2 min-w-0">
           {/* Chart */}
           <div className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col min-h-0">
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 shrink-0">
+            <p className="text-xs text-white/50 uppercase tracking-widest mb-2 shrink-0">
               Chart — <span className="text-white font-semibold">{activeSignal}</span>
             </p>
             <div className="flex-1 min-h-0">
