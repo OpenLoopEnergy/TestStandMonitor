@@ -3,9 +3,10 @@ import type { HeaderData } from '../types/signals'
 
 interface Props {
   onInputFactorChange: (factor: number) => void
+  isAdmin?: boolean
 }
 
-export function HeaderInfoPanel({ onInputFactorChange }: Props) {
+export function HeaderInfoPanel({ onInputFactorChange, isAdmin = false }: Props) {
   const [data, setData] = useState<HeaderData>({})
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<HeaderData>({})
@@ -93,13 +94,14 @@ export function HeaderInfoPanel({ onInputFactorChange }: Props) {
     <div className="bg-white/5 border border-white/10 rounded-xl p-3">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Test Info</h3>
-        {!editing
-          ? <button onClick={startEdit} className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition-colors">Edit</button>
-          : <div className="flex gap-2">
-              <button onClick={save} className="text-xs bg-red-700 hover:bg-red-600 px-3 py-1 rounded-lg transition-colors">Save</button>
-              <button onClick={() => setEditing(false)} className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition-colors">Cancel</button>
-            </div>
-        }
+        {isAdmin && (
+          !editing
+            ? <button onClick={startEdit} className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition-colors">Edit</button>
+            : <div className="flex gap-2">
+                <button onClick={save} className="text-xs bg-red-700 hover:bg-red-600 px-3 py-1 rounded-lg transition-colors">Save</button>
+                <button onClick={() => setEditing(false)} className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition-colors">Cancel</button>
+              </div>
+        )}
       </div>
 
       <div className="grid grid-cols-4 gap-2">

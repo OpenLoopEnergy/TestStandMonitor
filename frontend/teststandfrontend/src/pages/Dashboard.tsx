@@ -44,6 +44,15 @@ export default function Dashboard() {
   const [piConnectedDisplay, setPiConnectedDisplay] = useState(false)
   const piDisconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const ADMIN_SESSION_KEY = 'teststand_admin'
+  const LOGO_CLICK_WINDOW_MS = 3000
+  const LOGO_CLICK_REQUIRED = 10
+  const [isAdmin, setIsAdmin] = useState<boolean>(
+    () => sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true'
+  )
+  const [logoBounce, setLogoBounce] = useState(false)
+  const logoClickTimes = useRef<number[]>([])
+
   const isAutomatic = data.pb4 === 0
 
   // Debounce Pi disconnect — only show red after 6s of no connection
@@ -67,6 +76,25 @@ export default function Dashboard() {
     setTimeout(() => setToast(null), 3500)
   }, [])
 
+  function handleLogoClick() {
+    const now = Date.now()
+    const recent = [...logoClickTimes.current, now].filter(t => now - t < LOGO_CLICK_WINDOW_MS)
+    logoClickTimes.current = recent
+    if (recent.length >= LOGO_CLICK_REQUIRED) {
+      logoClickTimes.current = []
+      const next = !isAdmin
+      sessionStorage.setItem(ADMIN_SESSION_KEY, String(next))
+      setIsAdmin(next)
+      if (next) setLogoBounce(true)
+    }
+  }
+
+  useEffect(() => {
+    if (!logoBounce) return
+    const id = setTimeout(() => setLogoBounce(false), 600)
+    return () => clearTimeout(id)
+  }, [logoBounce])
+
   async function doClear() {
     try {
       await fetch('/clear_data_table', { method: 'POST' })
@@ -81,11 +109,13 @@ export default function Dashboard() {
   // Only trigger once Pi is connected to avoid false positives on page load
   useEffect(() => {
     if (data.pi_connected && data.pb4 === 0 && prevPb4.current === 1) {
-      setCountdown(AUTO_CLEAR_SECONDS)
-      setShowClearModal(true)
+      if (isAdmin) {
+        setCountdown(AUTO_CLEAR_SECONDS)
+        setShowClearModal(true)
+      }
     }
     prevPb4.current = data.pb4
-  }, [data.pb4])
+  }, [data.pb4, isAdmin])
 
   // Countdown timer when modal is visible
   useEffect(() => {
@@ -179,7 +209,7 @@ export default function Dashboard() {
     <div className="h-screen overflow-hidden flex flex-col bg-[#1a1a1a] text-white">
 
       {/* ── Auto-clear Modal ── */}
-      {showClearModal && (
+      {isAdmin && showClearModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
           <div className="bg-[#232323] border border-white/10 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
             <div className={`text-center mb-1 text-xs font-bold uppercase tracking-widest ${isAutomatic ? 'text-blue-400' : 'text-gray-400'}`}>
@@ -217,12 +247,21 @@ export default function Dashboard() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 shrink-0">
         <div className="flex items-center gap-4">
-          <div className="bg-white rounded-md px-3 py-1">
-            <img src="/logo.png" alt="Open Loop Energy" className="h-10 object-contain" />
+          <div
+            className={`bg-white rounded-md px-3 py-1 cursor-pointer select-none${logoBounce ? ' logo-bounce' : ''}`}
+            onClick={handleLogoClick}
+            title={isAdmin ? 'Admin mode active — click 10× to deactivate' : ''}
+          >
+            <img src="/logo.png" alt="Open Loop Energy" className="h-10 object-contain pointer-events-none" />
           </div>
           <span className="text-lg font-bold tracking-tight text-white/90">Test Stand Monitor</span>
         </div>
         <div className="flex items-center gap-3">
+          {isAdmin && (
+            <span className="text-xs px-2 py-1 rounded-full font-bold bg-amber-900/60 text-amber-300 border border-amber-700/50">
+              Admin
+            </span>
+          )}
           {/* Mode — prominent */}
           <span className={`text-sm px-3 py-1 rounded-full font-bold border ${
             isAutomatic
@@ -325,7 +364,7 @@ export default function Dashboard() {
 
           {/* Test Info */}
           <div className="shrink-0">
-            <HeaderInfoPanel onInputFactorChange={setInputFactor} />
+            <HeaderInfoPanel onInputFactorChange={setInputFactor} isAdmin={isAdmin} />
           </div>
 
           {/* Data Table */}
@@ -340,10 +379,12 @@ export default function Dashboard() {
                   className="text-xs bg-red-700 hover:bg-red-600 px-3 py-1 rounded-lg font-medium transition-colors">
                   Export Data
                 </button>
-                <button onClick={handleClear}
-                  className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg font-medium transition-colors">
-                  Clear Table
-                </button>
+                {isAdmin && (
+                  <button onClick={handleClear}
+                    className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg font-medium transition-colors">
+                    Clear Table
+                  </button>
+                )}
               </div>
             </div>
             <div className="overflow-y-auto max-h-52">
