@@ -41,8 +41,21 @@ export default function Dashboard() {
   const [countdown, setCountdown] = useState(AUTO_CLEAR_SECONDS)
   const prevPb4 = useRef<number>(1)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [piConnectedDisplay, setPiConnectedDisplay] = useState(false)
+  const piDisconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isAutomatic = data.pb4 === 0
+
+  // Debounce Pi disconnect — only show red after 6s of no connection
+  useEffect(() => {
+    if (data.pi_connected) {
+      if (piDisconnectTimer.current) clearTimeout(piDisconnectTimer.current)
+      setPiConnectedDisplay(true)
+    } else {
+      piDisconnectTimer.current = setTimeout(() => setPiConnectedDisplay(false), 6000)
+    }
+    return () => { if (piDisconnectTimer.current) clearTimeout(piDisconnectTimer.current) }
+  }, [data.pi_connected])
 
   const f1 = data.f1 * 0.01
   const theoFlow = inputFactor > 0 ? (data.s1 * inputFactor) / 231 : 0
@@ -224,9 +237,9 @@ export default function Dashboard() {
             {connected ? '● Backend' : '○ Backend'}
           </span>
           <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-            data.pi_connected ? 'bg-green-800/60 text-green-300' : 'bg-red-900/60 text-red-300'
+            piConnectedDisplay ? 'bg-green-800/60 text-green-300' : 'bg-red-900/60 text-red-300'
           }`}>
-            {data.pi_connected ? '● Pi' : '○ Pi'}
+            {piConnectedDisplay ? '● Raspberry Pi' : '○ Raspberry Pi'}
           </span>
           <span className="text-xs text-gray-400">
             {data.trending === 1
