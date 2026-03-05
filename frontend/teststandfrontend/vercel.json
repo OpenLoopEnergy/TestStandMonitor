@@ -1,13 +1,16 @@
 {
   "rewrites": [
-    { "source": "/get_:path*",          "destination": "https://web-production-4e718.up.railway.app/get_:path*" },
-    { "source": "/update_:path*",       "destination": "https://web-production-4e718.up.railway.app/update_:path*" },
-    { "source": "/export_:path*",       "destination": "https://web-production-4e718.up.railway.app/export_:path*" },
-    { "source": "/clear_:path*",        "destination": "https://web-production-4e718.up.railway.app/clear_:path*" },
-    { "source": "/past_tests",          "destination": "https://web-production-4e718.up.railway.app/past_tests" },
-    { "source": "/download_test:path*", "destination": "https://web-production-4e718.up.railway.app/download_test:path*" },
-    { "source": "/delete_file:path*",   "destination": "https://web-production-4e718.up.railway.app/delete_file:path*" },
-    { "source": "/health",              "destination": "https://web-production-4e718.up.railway.app/health" },
-    { "source": "/(.*)",                "destination": "/index.html" }
+    { "source": "/get_header_data",       "destination": "https://web-production-4e718.up.railway.app/get_header_data" },
+    { "source": "/get_csv_data",          "destination": "https://web-production-4e718.up.railway.app/get_csv_data" },
+    { "source": "/get_signal_data",       "destination": "https://web-production-4e718.up.railway.app/get_signal_data" },
+    { "source": "/get_live_data",         "destination": "https://web-production-4e718.up.railway.app/get_live_data" },
+    { "source": "/update_header_data",    "destination": "https://web-production-4e718.up.railway.app/update_header_data" },
+    { "source": "/export_data",           "destination": "https://web-production-4e718.up.railway.app/export_data" },
+    { "source": "/clear_data_table",      "destination": "https://web-production-4e718.up.railway.app/clear_data_table" },
+    { "source": "/past_tests",            "destination": "https://web-production-4e718.up.railway.app/past_tests" },
+    { "source": "/download_test/:filename", "destination": "https://web-production-4e718.up.railway.app/download_test/:filename" },
+    { "source": "/delete_file/:filename", "destination": "https://web-production-4e718.up.railway.app/delete_file/:filename" },
+    { "source": "/health",                "destination": "https://web-production-4e718.up.railway.app/health" },
+    { "source": "/(.*)",                  "destination": "/index.html" }
   ]
 }
