@@ -14,6 +14,7 @@ const DEFAULT_DATA: LiveData = {
   t1: 0, t3: 0,
   f1: 0, f2: 0, f3: 0,
   p1: 0, p2: 0, p3: 0, p4: 0, p5: 0,
+  pb4: 0,
   pi_connected: false,
 }
 

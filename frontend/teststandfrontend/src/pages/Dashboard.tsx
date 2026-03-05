@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLiveData } from '../hooks/useLiveData'
 import { SignalCard } from '../components/SignalCard'
 import { LiveChart } from '../components/LiveChart'
@@ -7,6 +7,7 @@ import { HeaderInfoPanel } from '../components/HeaderInfoPanel'
 import type { ChartSignal, LiveData, LogRow, SignalPoint } from '../types/signals'
 
 const COMPUTED_SIGNALS: ChartSignal[] = ['TheoFlow', 'Efficiency']
+const AUTO_CLEAR_SECONDS = 15
 
 function getLiveValue(signal: ChartSignal, d: LiveData): number | null {
   switch (signal) {
@@ -36,11 +37,61 @@ export default function Dashboard() {
   const [efficiencyHistory, setEfficiencyHistory] = useState<SignalPoint[]>([])
   const [logRows, setLogRows] = useState<LogRow[]>([])
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+  const [showClearModal, setShowClearModal] = useState(false)
+  const [countdown, setCountdown] = useState(AUTO_CLEAR_SECONDS)
+  const prevPb4 = useRef<number>(0)
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const isAutomatic = data.pb4 === 1
 
   const f1 = data.f1 * 0.01
   const theoFlow = inputFactor > 0 ? (data.s1 * inputFactor) / 231 : 0
   const efficiency = theoFlow > 0 ? (f1 / theoFlow) * 100 : 0
   const tp_pct = `${Math.floor(data.tp / 10.23)}%`
+
+  const showToast = useCallback((type: 'success' | 'error', msg: string) => {
+    setToast({ type, msg })
+    setTimeout(() => setToast(null), 3500)
+  }, [])
+
+  async function doClear() {
+    try {
+      await fetch('/clear_data_table', { method: 'POST' })
+      setLogRows([])
+      showToast('success', 'Data table cleared.')
+    } catch {
+      showToast('error', 'Failed to clear data table.')
+    }
+  }
+
+  // Detect Manual → Automatic transition and show the clear prompt
+  useEffect(() => {
+    if (data.pb4 === 1 && prevPb4.current === 0) {
+      setCountdown(AUTO_CLEAR_SECONDS)
+      setShowClearModal(true)
+    }
+    prevPb4.current = data.pb4
+  }, [data.pb4])
+
+  // Countdown timer when modal is visible
+  useEffect(() => {
+    if (!showClearModal) {
+      if (countdownRef.current) clearInterval(countdownRef.current)
+      return
+    }
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current!)
+          setShowClearModal(false)
+          doClear()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current) }
+  }, [showClearModal])
 
   useEffect(() => {
     const now = new Date().toISOString()
@@ -78,11 +129,6 @@ export default function Dashboard() {
     return () => clearInterval(id)
   }, [])
 
-  const showToast = useCallback((type: 'success' | 'error', msg: string) => {
-    setToast({ type, msg })
-    setTimeout(() => setToast(null), 3500)
-  }, [])
-
   async function handleExport() {
     try {
       const res = await fetch('/export_data', { method: 'POST' })
@@ -106,13 +152,7 @@ export default function Dashboard() {
 
   async function handleClear() {
     if (!confirm('Clear the data table? This cannot be undone.')) return
-    try {
-      await fetch('/clear_data_table', { method: 'POST' })
-      setLogRows([])
-      showToast('success', 'Data table cleared.')
-    } catch {
-      showToast('error', 'Failed to clear data table.')
-    }
+    await doClear()
   }
 
   function signalHistory(): SignalPoint[] {
@@ -124,6 +164,42 @@ export default function Dashboard() {
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-[#1a1a1a] text-white">
 
+      {/* ── Auto-clear Modal ── */}
+      {showClearModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="bg-[#232323] border border-white/10 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className={`text-center mb-1 text-xs font-bold uppercase tracking-widest ${isAutomatic ? 'text-blue-400' : 'text-gray-400'}`}>
+              Automatic Mode Detected
+            </div>
+            <h2 className="text-xl font-bold text-center mb-2">Clear Data Table?</h2>
+            <p className="text-sm text-gray-400 text-center mb-6">
+              It looks like you're starting an automatic test. The data table should be cleared before each test to avoid mixing results.
+              Auto-clearing in <span className="text-white font-bold text-lg">{countdown}</span>s…
+            </p>
+            <div className="w-full bg-white/10 rounded-full h-1.5 mb-6">
+              <div
+                className="bg-red-600 h-1.5 rounded-full transition-all duration-1000"
+                style={{ width: `${(countdown / AUTO_CLEAR_SECONDS) * 100}%` }}
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowClearModal(false); doClear() }}
+                className="flex-1 bg-red-700 hover:bg-red-600 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+              >
+                Clear Data Table Now
+              </button>
+              <button
+                onClick={() => setShowClearModal(false)}
+                className="flex-1 bg-white/10 hover:bg-white/20 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+              >
+                Keep Data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 shrink-0">
         <div className="flex items-center gap-4">
@@ -133,6 +209,14 @@ export default function Dashboard() {
           <span className="text-lg font-bold tracking-tight text-white/90">Test Stand Monitor</span>
         </div>
         <div className="flex items-center gap-3">
+          {/* Mode — prominent */}
+          <span className={`text-sm px-3 py-1 rounded-full font-bold border ${
+            isAutomatic
+              ? 'bg-blue-900/60 text-blue-300 border-blue-700'
+              : 'bg-white/5 text-gray-300 border-white/10'
+          }`}>
+            {isAutomatic ? '⚙ Automatic' : '✋ Manual'}
+          </span>
           <span className={`text-xs px-2 py-1 rounded-full font-medium ${
             connected ? 'bg-green-800/60 text-green-300' : 'bg-red-900/60 text-red-300'
           }`}>
@@ -148,6 +232,12 @@ export default function Dashboard() {
               ? <span className="text-yellow-400 font-semibold">● Trending</span>
               : <span className="text-gray-500">○ Idle</span>}
           </span>
+          <a
+            href="/past-tests"
+            className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg font-medium transition-colors"
+          >
+            Past Tests
+          </a>
         </div>
       </div>
 

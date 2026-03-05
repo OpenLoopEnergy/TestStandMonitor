@@ -302,6 +302,7 @@ def decoded_to_live_frame(decoded: dict) -> dict | None:
             "t3":       decoded["signalT3"],
             "trending": decoded["signalLogging"],
             "tp":       decoded["signalDispTP"],
+            "pb4":      decoded["signalPB4"],
         }
     if mid == 0x0CFF020A:
         return {

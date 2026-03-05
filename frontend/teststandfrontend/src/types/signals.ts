@@ -30,6 +30,9 @@ export interface LiveData {
   p4: number
   p5: number
 
+  // Mode: 1 = Automatic, 0 = Manual
+  pb4: number
+
   // Meta
   input_factor?: number
   theo_flow?: number
