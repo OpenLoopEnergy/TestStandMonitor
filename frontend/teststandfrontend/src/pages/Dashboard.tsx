@@ -4,9 +4,28 @@ import { SignalCard } from '../components/SignalCard'
 import { LiveChart } from '../components/LiveChart'
 import { DataTable } from '../components/DataTable'
 import { HeaderInfoPanel } from '../components/HeaderInfoPanel'
-import type { ChartSignal, LogRow, SignalPoint } from '../types/signals'
+import type { ChartSignal, LiveData, LogRow, SignalPoint } from '../types/signals'
 
 const COMPUTED_SIGNALS: ChartSignal[] = ['TheoFlow', 'Efficiency']
+
+function getLiveValue(signal: ChartSignal, d: LiveData): number | null {
+  switch (signal) {
+    case 'S1': return d.s1
+    case 'SP': return d.sp
+    case 'TP': return d.tp / 10.23
+    case 'F1': return d.f1 * 0.01
+    case 'F2': return d.f2 * 0.01
+    case 'F3': return d.f3 * 0.01
+    case 'T1': return d.t1 * 0.1
+    case 'T3': return d.t3 * 0.1
+    case 'P1': return d.p1
+    case 'P2': return d.p2
+    case 'P3': return d.p3
+    case 'P4': return d.p4
+    case 'P5': return d.p5
+    default: return null
+  }
+}
 
 export default function Dashboard() {
   const { data, connected } = useLiveData()
@@ -30,13 +49,22 @@ export default function Dashboard() {
     setEfficiencyHistory(prev => { const n = [...prev, { timestamp: now, value: efficiency }]; return n.length > max ? n.slice(-max) : n })
   }, [data])
 
+  // Clear history when switching to a non-computed signal
+  useEffect(() => {
+    if (!COMPUTED_SIGNALS.includes(activeSignal)) setHistoryPoints([])
+  }, [activeSignal])
+
+  // Accumulate live data for non-computed signals (up to 100 points)
   useEffect(() => {
     if (COMPUTED_SIGNALS.includes(activeSignal)) return
-    fetch(`/get_signal_data?signal=${activeSignal}`)
-      .then(r => r.json())
-      .then((pts: SignalPoint[]) => setHistoryPoints(pts.reverse()))
-      .catch(() => {})
-  }, [activeSignal])
+    const val = getLiveValue(activeSignal, data)
+    if (val === null) return
+    const now = new Date().toISOString()
+    setHistoryPoints(prev => {
+      const n = [...prev, { timestamp: now, value: val }]
+      return n.length > 100 ? n.slice(-100) : n
+    })
+  }, [data])
 
   useEffect(() => {
     function fetchLog() {
@@ -108,7 +136,12 @@ export default function Dashboard() {
           <span className={`text-xs px-2 py-1 rounded-full font-medium ${
             connected ? 'bg-green-800/60 text-green-300' : 'bg-red-900/60 text-red-300'
           }`}>
-            {connected ? (data.pi_connected ? '● Pi Connected' : '● Backend Connected') : '○ Disconnected'}
+            {connected ? '● Backend' : '○ Backend'}
+          </span>
+          <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+            data.pi_connected ? 'bg-green-800/60 text-green-300' : 'bg-red-900/60 text-red-300'
+          }`}>
+            {data.pi_connected ? '● Pi' : '○ Pi'}
           </span>
           <span className="text-xs text-gray-400">
             {data.trending === 1
