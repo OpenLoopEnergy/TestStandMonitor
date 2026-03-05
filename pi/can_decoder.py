@@ -303,6 +303,7 @@ def decoded_to_live_frame(decoded: dict) -> dict | None:
             "trending": decoded["signalLogging"],
             "tp":       decoded["signalDispTP"],
             "pb4":      decoded["signalPB4"],
+            "tp_reved": decoded["signalOut_TP_Reved"],
         }
     if mid == 0x0CFF020A:
         return {
@@ -328,5 +329,7 @@ def decoded_to_live_frame(decoded: dict) -> dict | None:
         }
     if mid == 0x0CFF0D14:
         return {"p3": decoded["SignalP3"]}
+    if mid == 0x0CFF0E14:
+        return {"m2_tp9a_dir": decoded["signalM2_TP9A_Dir"]}
 
     return None  # Message doesn't contribute to the live display

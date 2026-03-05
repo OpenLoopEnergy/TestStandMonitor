@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, Float, Text, DateTime, String
+from sqlalchemy import Column, Integer, Float, Text, DateTime, String, Boolean
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy import types
 
@@ -46,6 +46,7 @@ class TestLog(Base):
     p3 = Column(Integer)
     p4 = Column(Integer)
     p5 = Column(Integer)
+    tp_reversed = Column(Boolean, nullable=True)
 
 
 class AppSettings(Base):

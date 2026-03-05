@@ -43,6 +43,8 @@ async def _log_tick():
     from backend.db.database import SessionLocal
     from backend.db.models import TestLog
 
+    tp_reversed = bool(snapshot.get("tp_reved", 0) or snapshot.get("m2_tp9a_dir", 0))
+
     row = TestLog(
         logged_at=datetime.now(timezone.utc),
         s1=snapshot.get("s1"),
@@ -63,6 +65,7 @@ async def _log_tick():
         p3=snapshot.get("p3"),
         p4=snapshot.get("p4"),
         p5=snapshot.get("p5"),
+        tp_reversed=tp_reversed,
     )
 
     db = SessionLocal()

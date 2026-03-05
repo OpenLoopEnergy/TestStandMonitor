@@ -67,6 +67,7 @@ def export_data(db: Session = Depends(get_db)):
             "Date", "Time", "S1", "SP", "TP", "Cycle", "Cycle Timer",
             "LCSetpoint", "LC Regulate", "Step",
             "F1", "F2", "F3", "T1", "T3", "P1", "P2", "P3", "P4", "P5",
+            "TP Reversed",
         ])
 
         # Data rows — F1 scaled × 0.01 here (single place, same as original)
@@ -83,6 +84,7 @@ def export_data(db: Session = Depends(get_db)):
                 f"{scaled_f1:.2f}", r.f2, r.f3,
                 r.t1, r.t3,
                 r.p1, r.p2, r.p3, r.p4, r.p5,
+                1 if r.tp_reversed else 0,
             ])
 
     # Convert CSV → Excel using the preserved exportXLSX logic
