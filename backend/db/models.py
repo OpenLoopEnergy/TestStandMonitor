@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, Float, Text, DateTime, String, Boolean
+from sqlalchemy import Column, Integer, Float, Text, DateTime, String, Boolean, LargeBinary
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy import types
 
@@ -55,3 +55,13 @@ class AppSettings(Base):
 
     key = Column(String(100), primary_key=True)
     value = Column(Text)
+
+
+class ExportedFile(Base):
+    """Exported test result Excel files stored as binary blobs."""
+    __tablename__ = "exported_files"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    filename = Column(String(500), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    file_data = Column(LargeBinary, nullable=False)

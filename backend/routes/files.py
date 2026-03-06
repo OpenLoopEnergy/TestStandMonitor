@@ -1,85 +1,58 @@
 import logging
-import os
-from datetime import datetime
 
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, HTTPException, Response
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from backend.db.database import get_db
+from backend.db.models import ExportedFile
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-EXPORT_DIR = os.getenv("EXPORT_DIR", os.path.join(os.path.dirname(__file__), "..", "..", "exports"))
-BACKUP_DIR = os.path.join(EXPORT_DIR, "db_backups")
-
-
-def _safe_path(directory: str, filename: str) -> str:
-    """Resolve a filename inside a directory, rejecting traversal attempts."""
-    if ".." in filename or filename.startswith("/") or filename.startswith("\\"):
-        raise HTTPException(status_code=400, detail="Invalid filename")
-    full = os.path.realpath(os.path.join(directory, filename))
-    if not full.startswith(os.path.realpath(directory)):
-        raise HTTPException(status_code=400, detail="Invalid filename")
-    return full
-
-
-def _find_file(filename: str) -> str:
-    """Find a file in EXPORT_DIR or BACKUP_DIR."""
-    for directory in (EXPORT_DIR, BACKUP_DIR):
-        try:
-            path = _safe_path(directory, filename)
-            if os.path.isfile(path):
-                return path
-        except HTTPException:
-            pass
-    raise HTTPException(status_code=404, detail="File not found")
-
 
 @router.get("/past_tests")
-def past_tests():
-    os.makedirs(EXPORT_DIR, exist_ok=True)
-
-    xlsx_files = []
-    for f in os.listdir(EXPORT_DIR):
-        if f.lower().endswith(".xlsx"):
-            full = os.path.join(EXPORT_DIR, f)
-            mod = os.path.getmtime(full)
-            xlsx_files.append({
-                "filename": f,
-                "modified_time": datetime.fromtimestamp(mod).strftime("%B %d, %Y at %I:%M:%S %p"),
-            })
-    xlsx_files.sort(key=lambda x: x["modified_time"], reverse=True)
-
-    db_files = []
-    if os.path.isdir(BACKUP_DIR):
-        for f in os.listdir(BACKUP_DIR):
-            if f.lower().endswith(".db"):
-                full = os.path.join(BACKUP_DIR, f)
-                mod = os.path.getmtime(full)
-                db_files.append({
-                    "filename": f,
-                    "modified_time": datetime.fromtimestamp(mod).strftime("%B %d, %Y at %I:%M:%S %p"),
-                })
-        db_files.sort(key=lambda x: x["modified_time"], reverse=True)
-
-    return {"files": xlsx_files, "db_files": db_files}
+def past_tests(db: Session = Depends(get_db)):
+    rows = db.query(ExportedFile).order_by(ExportedFile.created_at.desc()).all()
+    files = [{"filename": r.filename, "created_at": r.created_at.isoformat()} for r in rows]
+    return {"files": files, "db_files": []}
 
 
 @router.get("/download_test/{filename}")
-def download_test(filename: str):
-    path = _find_file(filename)
-    if filename.lower().endswith(".xlsx"):
-        media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    else:
-        media_type = "application/octet-stream"
-    return FileResponse(path, media_type=media_type, filename=filename)
+def download_test(filename: str, db: Session = Depends(get_db)):
+    row = db.query(ExportedFile).filter(ExportedFile.filename == filename).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="File not found")
+    return Response(
+        content=row.file_data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.delete("/delete_file/{filename}")
-def delete_file(filename: str):
-    path = _find_file(filename)
-    try:
-        os.remove(path)
-        return {"status": "success", "message": "File deleted."}
-    except Exception as e:
-        logger.error("Error deleting %s: %s", filename, e)
-        raise HTTPException(status_code=500, detail="Failed to delete file.")
+def delete_file(filename: str, db: Session = Depends(get_db)):
+    row = db.query(ExportedFile).filter(ExportedFile.filename == filename).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="File not found")
+    db.delete(row)
+    db.commit()
+    return {"status": "success", "message": "File deleted."}
+
+
+class RenameRequest(BaseModel):
+    old_filename: str
+    new_filename: str
+
+
+@router.post("/rename_file")
+def rename_file(body: RenameRequest, db: Session = Depends(get_db)):
+    new_name = body.new_filename.strip()
+    if not new_name.endswith(".xlsx"):
+        new_name += ".xlsx"
+    row = db.query(ExportedFile).filter(ExportedFile.filename == body.old_filename).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="File not found")
+    row.filename = new_name
+    db.commit()
+    return {"filename": row.filename}

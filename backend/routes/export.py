@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from backend.db.database import get_db
-from backend.db.models import TestLog, AppSettings
+from backend.db.models import TestLog, AppSettings, ExportedFile
 from backend.services import data_store
 
 router = APIRouter()
@@ -96,6 +96,13 @@ def export_data(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
     excel_filename = os.path.basename(excel_path)
+
+    # Save to DB so all users can see it on Past Tests
+    with open(excel_path, "rb") as fh:
+        file_bytes = fh.read()
+    db.add(ExportedFile(filename=excel_filename, file_data=file_bytes))
+    db.commit()
+
     return FileResponse(
         excel_path,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
