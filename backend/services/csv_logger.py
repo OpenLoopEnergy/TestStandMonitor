@@ -13,7 +13,7 @@ from backend.services import data_store
 logger = logging.getLogger(__name__)
 
 _INTERVAL_SECONDS = 5
-_DEBUG_INTERVAL_SECONDS = 2
+_DEBUG_INTERVAL_SECONDS = 0.5
 
 
 async def run_logger():
