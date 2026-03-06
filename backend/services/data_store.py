@@ -6,6 +6,7 @@ The frontend WebSocket handler reads from here to push to browsers.
 Zero DB reads on the hot path.
 """
 import asyncio
+import time
 from typing import Any
 
 # Latest signal values from the Pi — updated on every decoded CAN frame
@@ -23,6 +24,9 @@ latest: dict[str, Any] = {
     "tp_reved": 0,
     "m2_tp9a_dir": 0,
 }
+
+# Timestamp of the last CAN frame received from the Pi (monotonic clock)
+last_pi_frame_at: float = 0.0
 
 # Debug logging mode — when True, logs every tick in Automatic mode regardless of trending
 debug_mode: bool = False

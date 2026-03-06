@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 
 import dotenv
@@ -31,7 +32,7 @@ async def lifespan(app: FastAPI):
     logger.info("Starting background CSV logger…")
     logger.info("Starting sim mode if MOCK_MODE=true…")
 
-    tasks = [asyncio.create_task(run_logger())]
+    tasks = [asyncio.create_task(run_logger()), asyncio.create_task(run_pi_watchdog())]
 
     if os.getenv("MOCK_MODE", "false").lower() == "true":
         from pi.sim_mode import run_sim
@@ -76,6 +77,23 @@ def health():
     return {"status": "ok", "pi_connected": data_store.latest.get("pi_connected", False)}
 
 
+# ── Pi connection watchdog ────────────────────────────────────────────────────
+
+_PI_TIMEOUT_SECONDS = 5  # Mark disconnected if no CAN frame received in this window
+
+
+async def run_pi_watchdog():
+    """Sets pi_connected based on whether CAN frames are arriving, not WebSocket state."""
+    while True:
+        await asyncio.sleep(2)
+        age = time.monotonic() - data_store.last_pi_frame_at
+        currently_connected = data_store.latest.get("pi_connected", False)
+        if age > _PI_TIMEOUT_SECONDS and currently_connected:
+            await data_store.update({"pi_connected": False})
+        elif age <= _PI_TIMEOUT_SECONDS and not currently_connected:
+            await data_store.update({"pi_connected": True})
+
+
 # ── WebSocket: Pi → Backend ───────────────────────────────────────────────────
 
 @app.websocket("/ws/pi")
@@ -88,7 +106,6 @@ async def ws_pi(websocket: WebSocket):
     """
     await websocket.accept()
     logger.info("Pi connected from %s", websocket.client)
-    await data_store.update({"pi_connected": True})
 
     async def send_keepalive():
         while True:
@@ -106,6 +123,7 @@ async def ws_pi(websocket: WebSocket):
             try:
                 msg = json.loads(raw)
                 if msg.get("type") == "frame" and isinstance(msg.get("data"), dict):
+                    data_store.last_pi_frame_at = time.monotonic()
                     await data_store.update(msg["data"])
             except json.JSONDecodeError:
                 logger.warning("Received non-JSON from Pi: %s", raw[:120])
@@ -113,7 +131,6 @@ async def ws_pi(websocket: WebSocket):
         logger.warning("Pi disconnected")
     finally:
         keepalive_task.cancel()
-        await data_store.update({"pi_connected": False})
 
 
 # ── WebSocket: Backend → Browser ─────────────────────────────────────────────
