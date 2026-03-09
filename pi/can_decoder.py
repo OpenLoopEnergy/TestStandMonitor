@@ -162,6 +162,7 @@ def decode_message(message: dict) -> tuple:
             "signalEE_MaxCycles":    data[6],
             "signalEE_EE_SM_Dir":    (data[7] & 0x01),
             "signalEE_EE_TP_Reverse":(data[7] & 0x02) >> 1,
+            "signalEE_EEDirSwitch":  (data[7] & 0x0C) >> 2,
         }
 
     if message_id == 0x0CFF070A:
@@ -333,3 +334,4 @@ def decoded_to_live_frame(decoded: dict) -> dict | None:
         return {"m2_tp9a_dir": decoded["signalM2_TP9A_Dir"]}
 
     return None  # Message doesn't contribute to the live display
+
