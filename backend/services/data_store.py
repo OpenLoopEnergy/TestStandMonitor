@@ -23,6 +23,7 @@ latest: dict[str, Any] = {
     "debug_mode": False,
     "tp_reved": 0,
     "m2_tp9a_dir": 0,
+    "ee_dir_switch": 0,
 }
 
 # Timestamp of the last CAN frame received from the Pi (monotonic clock)

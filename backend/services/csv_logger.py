@@ -66,6 +66,7 @@ async def _log_tick():
         p4=snapshot.get("p4"),
         p5=snapshot.get("p5"),
         tp_reversed=tp_reversed,
+        ee_dir_switch=snapshot.get("ee_dir_switch"),
     )
 
     db = SessionLocal()

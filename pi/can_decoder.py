@@ -330,6 +330,8 @@ def decoded_to_live_frame(decoded: dict) -> dict | None:
         }
     if mid == 0x0CFF0D14:
         return {"p3": decoded["SignalP3"]}
+    if mid == 0x0CFF060A:
+        return {"ee_dir_switch": decoded["signalEE_EEDirSwitch"]}
     if mid == 0x0CFF0E14:
         return {"m2_tp9a_dir": decoded["signalM2_TP9A_Dir"]}
 

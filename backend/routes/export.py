@@ -17,16 +17,22 @@ from backend.services import data_store
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-HEADER_FIELDS = [
+HEADER_FIELDS_TOP = [
     ("programName", "Program Name"),
     ("description", "Description"),
     ("employeeId", "Employee ID"),
     ("compSet", "Comp Set"),
     ("inputFactor", "Input Factor"),
     ("inputFactorType", "Input Factor Type"),
+]
+
+HEADER_FIELDS_BOTTOM = [
     ("serialNumber", "Serial Number"),
     ("customerId", "Customer ID"),
 ]
+
+_DIR_SWITCH_LABELS = {0: "Both", 1: "Forward", 2: "Backward"}
+
 
 EXPORT_DIR = os.getenv("EXPORT_DIR", os.path.join(os.path.dirname(__file__), "..", "..", "exports"))
 
@@ -39,7 +45,8 @@ def _get_setting(db: Session, key: str) -> str:
 @router.post("/export_data")
 def export_data(db: Session = Depends(get_db)):
     # Fetch header metadata
-    headers = {field_key: _get_setting(db, field_key) for field_key, _ in HEADER_FIELDS}
+    all_header_fields = HEADER_FIELDS_TOP + HEADER_FIELDS_BOTTOM
+    headers = {field_key: _get_setting(db, field_key) for field_key, _ in all_header_fields}
 
     # Fetch all logged rows (no limit — full test run)
     rows = db.query(TestLog).order_by(TestLog.logged_at.asc()).all()
@@ -57,7 +64,11 @@ def export_data(db: Session = Depends(get_db)):
         writer = csv.writer(f)
 
         # Metadata rows
-        for field_key, display_name in HEADER_FIELDS:
+        for field_key, display_name in HEADER_FIELDS_TOP:
+            writer.writerow([display_name, headers.get(field_key, "N/A")])
+        dir_val = data_store.latest.get("ee_dir_switch", 0)
+        writer.writerow(["Direction Switch", _DIR_SWITCH_LABELS.get(dir_val, str(dir_val))])
+        for field_key, display_name in HEADER_FIELDS_BOTTOM:
             writer.writerow([display_name, headers.get(field_key, "N/A")])
 
         writer.writerow([])  # Blank separator

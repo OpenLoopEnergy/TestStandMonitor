@@ -47,6 +47,7 @@ class TestLog(Base):
     p4 = Column(Integer)
     p5 = Column(Integer)
     tp_reversed = Column(Boolean, nullable=True)
+    ee_dir_switch = Column(Integer, nullable=True)
 
 
 class AppSettings(Base):
