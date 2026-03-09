@@ -117,8 +117,8 @@ def decode_message(message: dict) -> tuple:
             "signalLC1_Setpoint": data[2] | (data[3] << 8),
             "signalLC1_Feedback": data[4] | (data[5] << 8),
             "signalLC1_Enable":   (data[6] & 0x01),
-            "signalLC1_State":    (data[6] & 0x04) >> 2,
-            "signalLC1_Regulate": (data[6] & 0x08) >> 4,
+            "signalLC1_State":    (data[6] & 0x02) >> 1,
+            "signalLC1_Regulate": (data[6] & 0x04) >> 2,
         }
 
     if message_id == 0x0CFF030A:
@@ -334,4 +334,5 @@ def decoded_to_live_frame(decoded: dict) -> dict | None:
         return {"m2_tp9a_dir": decoded["signalM2_TP9A_Dir"]}
 
     return None  # Message doesn't contribute to the live display
+
 
