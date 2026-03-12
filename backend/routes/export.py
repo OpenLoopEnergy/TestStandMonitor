@@ -54,7 +54,8 @@ def export_data(db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No data in CSV file to export.")
 
     # Build CSV in memory
-    timestamp = datetime.now().strftime("(%Y-%m-%d_%H-%M-%S)")
+    now = datetime.now()
+    timestamp = now.strftime("(%m-%d-%Y_%I-%M-%S_%p)")
     csv_filename = f"{timestamp}_log_data.csv"
 
     os.makedirs(EXPORT_DIR, exist_ok=True)

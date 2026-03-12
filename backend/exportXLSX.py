@@ -148,7 +148,7 @@ def process_csv_to_excel_from_file(file_path):
         df_filtered["Efficiency"] = df_filtered.apply(efficiency_formula, axis=1)
         
         # Output path
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        timestamp = datetime.now().strftime("%m-%d-%Y_%I-%M-%S_%p")
         excel_file = os.path.join(os.path.dirname(file_path), f"TestResults_{timestamp}.xlsx")
         
         with pd.ExcelWriter(excel_file, engine="xlsxwriter") as writer:
