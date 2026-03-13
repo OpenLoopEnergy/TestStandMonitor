@@ -26,7 +26,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 BACKEND_WS_URL = os.environ["BACKEND_WS_URL"]  # Required — fail fast if missing
-CAN_CHANNEL = os.getenv("CAN_CHANNEL", "can0")
+CAN_CHANNEL = os.getenv("CAN_CHANNEL", "can0") # test
 RECONNECT_DELAY = 2  # seconds between reconnection attempts
 
 
