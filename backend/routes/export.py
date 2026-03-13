@@ -115,6 +115,10 @@ def export_data(db: Session = Depends(get_db)):
     db.add(ExportedFile(filename=excel_filename, file_data=file_bytes))
     db.commit()
 
+    # Upload to SharePoint (no-ops silently if Azure env vars are not set)
+    from backend.services.sharepoint_upload import upload_to_sharepoint
+    upload_to_sharepoint(excel_path, excel_filename)
+
     return FileResponse(
         excel_path,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
