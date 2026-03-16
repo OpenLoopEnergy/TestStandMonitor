@@ -11,7 +11,10 @@
       "Bash(python -c \"import sqlite3; conn = sqlite3.connect\\(''settings.db''\\); rows = conn.execute\\(''SELECT * FROM AppSettings''\\).fetchall\\(\\); [print\\(r\\) for r in rows]; conn.close\\(\\)\")",
       "Bash(python -c \"import sqlite3; conn = sqlite3.connect\\(''dev.db''\\); rows = conn.execute\\(''SELECT * FROM app_settings''\\).fetchall\\(\\); [print\\(r\\) for r in rows]; conn.close\\(\\)\")",
       "Bash(python -c \":*)",
-      "Bash(python -c \"pass\")"
+      "Bash(python -c \"pass\")",
+      "WebSearch",
+      "Bash(ls -d \"/c/Users/tsmith/Coding/Teststand Monitor/TestStandWebInterface\"/*/)",
+      "WebFetch(domain:railway.com)"
     ]
   }
 }

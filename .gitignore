@@ -1,1 +1,17 @@
 .env
+
+# Legacy archive (kept locally, not pushed)
+_legacy/
+
+# Python cache
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# Generated export files (test data artifacts)
+*_log_data.csv
+TestResults_*.xlsx
+*.pdf
+
+# SQLite databases
+*.db
