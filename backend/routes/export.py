@@ -110,10 +110,16 @@ def export_data(db: Session = Depends(get_db)):
     excel_filename = os.path.basename(excel_path)
 
     # Save to DB so all users can see it on Past Tests
+    # Guard against duplicates when multiple users click Export at the same time:
+    # if a file of the same size was saved in the last 30 seconds, skip the insert.
     with open(excel_path, "rb") as fh:
         file_bytes = fh.read()
-    db.add(ExportedFile(filename=excel_filename, file_data=file_bytes))
-    db.commit()
+    from datetime import timedelta, timezone
+    recent_cutoff = datetime.now(timezone.utc) - timedelta(seconds=30)
+    recent = db.query(ExportedFile).filter(ExportedFile.created_at >= recent_cutoff).all()
+    if not any(len(e.file_data) == len(file_bytes) for e in recent):
+        db.add(ExportedFile(filename=excel_filename, file_data=file_bytes))
+        db.commit()
 
     # Upload to SharePoint (no-ops silently if Azure env vars are not set)
     from backend.services.sharepoint_upload import upload_to_sharepoint
