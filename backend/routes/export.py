@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from backend.db.database import get_db
 from backend.db.models import TestLog, AppSettings, ExportedFile
 from backend.services import data_store
+from backend.time_utils import get_export_now
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -54,7 +55,7 @@ def export_data(db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No data in CSV file to export.")
 
     # Build CSV in memory
-    now = datetime.now()
+    now = get_export_now()
     timestamp = now.strftime("(%m-%d-%Y_%I-%M-%S_%p)")
     csv_filename = f"{timestamp}_log_data.csv"
 
