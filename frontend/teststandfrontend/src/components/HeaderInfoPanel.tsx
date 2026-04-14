@@ -96,10 +96,10 @@ export function HeaderInfoPanel({ onInputFactorChange, isAdmin = false }: Props)
         <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Test Info</h3>
         {isAdmin && (
           !editing
-            ? <button onClick={startEdit} className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition-colors">Edit</button>
+            ? <button onClick={startEdit} className="cursor-pointer text-sm bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-lg font-semibold transition-colors">Edit</button>
             : <div className="flex gap-2">
-                <button onClick={save} className="text-xs bg-red-700 hover:bg-red-600 px-3 py-1 rounded-lg transition-colors">Save</button>
-                <button onClick={() => setEditing(false)} className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition-colors">Cancel</button>
+                <button onClick={save} className="cursor-pointer text-sm bg-red-700 hover:bg-red-600 px-5 py-2.5 rounded-lg font-semibold transition-colors">Save</button>
+                <button onClick={() => setEditing(false)} className="cursor-pointer text-sm bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-lg font-semibold transition-colors">Cancel</button>
               </div>
         )}
       </div>

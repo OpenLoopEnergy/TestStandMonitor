@@ -262,7 +262,7 @@ export default function Dashboard() {
           {isAdmin && (
             <button
               onClick={handleDebugToggle}
-              className={`text-xs px-2 py-1 rounded-full font-bold border transition-colors ${
+              className={`cursor-pointer text-sm px-4 py-2 rounded-full font-bold border transition-colors ${
                 data.debug_mode
                   ? 'bg-orange-900/60 text-orange-300 border-orange-700/50'
                   : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
@@ -296,7 +296,7 @@ export default function Dashboard() {
           </span>
           <a
             href="/past-tests"
-            className="text-sm bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg font-semibold transition-colors"
+            className="cursor-pointer text-base bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-lg font-semibold transition-colors"
           >
             Past Tests
           </a>
@@ -385,12 +385,12 @@ export default function Dashboard() {
               </div>
               <div className="flex gap-2">
                 <button onClick={handleExport}
-                  className="text-xs bg-red-700 hover:bg-red-600 px-3 py-1 rounded-lg font-medium transition-colors">
+                  className="cursor-pointer text-sm bg-red-700 hover:bg-red-600 px-5 py-2.5 rounded-lg font-semibold transition-colors">
                   Export Data
                 </button>
                 {isAdmin && (
                   <button onClick={handleClear}
-                    className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg font-medium transition-colors">
+                    className="cursor-pointer text-sm bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-lg font-semibold transition-colors">
                     Clear Table
                   </button>
                 )}
