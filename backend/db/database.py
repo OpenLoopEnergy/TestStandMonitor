@@ -39,6 +39,16 @@ def init_db():
     from backend.db import models  # noqa: F401 — ensure models are registered
     from backend.db.models import AppSettings
     Base.metadata.create_all(bind=engine)
+
+    # Add new nullable columns to existing tables without dropping data
+    with engine.connect() as conn:
+        for col_def in ("ALTER TABLE test_log ADD COLUMN trending INTEGER",):
+            try:
+                conn.execute(__import__("sqlalchemy").text(col_def))
+                conn.commit()
+            except Exception:
+                pass  # Column already exists — safe to ignore
+
     # Seed defaults only for keys that don't already exist
     db = SessionLocal()
     try:
