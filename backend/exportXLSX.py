@@ -4,6 +4,9 @@ import csv
 import os
 from backend.time_utils import get_export_now
 
+# Save your logo PNG to this path — used on both the Data sheet and chart tab
+LOGO_PATH = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
+
 def process_csv_to_excel_from_file(file_path):
     try:
         with open(file_path, "r", encoding="utf-8") as csv_file:
@@ -77,6 +80,8 @@ def process_csv_to_excel_from_file(file_path):
         # 2. Excel Generation
         timestamp = get_export_now().strftime("%m-%d-%Y_%I-%M-%S_%p")
         excel_file = os.path.join(os.path.dirname(file_path), f"TestResults_{timestamp}.xlsx")
+        
+        has_logo = os.path.isfile(LOGO_PATH)
 
         with pd.ExcelWriter(excel_file, engine="xlsxwriter") as writer:
             pd.DataFrame(metadata).to_excel(writer, index=False, sheet_name="Data", header=False)
@@ -96,8 +101,18 @@ def process_csv_to_excel_from_file(file_path):
             lc_target = white      # Reference Line
             grid_line = '#404040'  # Subtle dark grid
             
+
+            # Column formatting
             percent_fmt = workbook.add_format({"num_format": "0.0%"})
             worksheet.set_column(df.columns.get_loc("Efficiency A"), df.columns.get_loc("Efficiency B"), 12, percent_fmt)
+
+            # Logo on Data sheet — top-right of the metadata block
+            if has_logo:
+                worksheet.insert_image(0, 5, LOGO_PATH, {
+                    'x_scale': 0.07,
+                    'y_scale': 0.07,
+                    'object_position': 3,  # Don't move or resize with cells
+                })
 
             # 3. Chart - Open Loop Dark Theme
             if len(df) > 0:
@@ -174,6 +189,20 @@ def process_csv_to_excel_from_file(file_path):
                 })
 
                 chart.set_legend({'position': 'bottom', 'font': {'color': white}})
+                # Use a regular worksheet (not chartsheet) so we can embed the logo
+                chart_ws = workbook.add_worksheet("Report Chart")
+                chart_ws.hide_gridlines(2)
+                chart_ws.insert_chart('A1', chart, {'x_scale': 3.0, 'y_scale': 2.5})
+
+                # Logo on chart tab — upper-right corner of the chart area
+                if has_logo:
+                    chart_ws.insert_image(0, 0, LOGO_PATH, {
+                        'x_scale': 0.06,
+                        'y_scale': 0.06,
+                        'x_offset': 1260,
+                        'y_offset': 12,
+                        'object_position': 3,
+                    })
 
                 chartsheet = workbook.add_chartsheet("Report Chart")
                 chartsheet.set_chart(chart)
