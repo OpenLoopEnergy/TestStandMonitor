@@ -4,21 +4,21 @@ import csv
 import os
 from backend.time_utils import get_export_now
 
-# Primary logo location — drop your CE Energy PNG here to override the fallback.
+# Primary logo — drop your CE Energy PNG at backend/assets/logo.png to override.
 _ASSETS_LOGO   = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
 _FALLBACK_LOGO = os.path.join(os.path.dirname(__file__), "..", "frontend", "teststandfrontend", "public", "logo.png")
 LOGO_PATH = _ASSETS_LOGO if os.path.isfile(_ASSETS_LOGO) else _FALLBACK_LOGO
 
 # Brand palette
-C_RED      = '#EB1C23'  # Primary
+C_RED      = '#EB1C23'
 C_BLACK    = '#000000'
 C_WHITE    = '#FFFFFF'
-C_CHARCOAL = '#2E3E4D'  # Secondary
-C_AMBER    = '#ECA400'  # Accent — use sparingly
+C_CHARCOAL = '#2E3E4D'
+C_AMBER    = '#ECA400'   # accent — sparingly
 
-# Pressure area colours — clearly visible against the dark plot background
-C_P1 = '#3D6B8A'   # medium steel-blue
-C_P5 = '#2A5070'   # darker steel-blue
+# Pressure band colours — clearly distinct from each other and from the dark plot background
+C_P1 = '#4472C4'   # office blue  — bright, clearly different from charcoal
+C_P5 = '#2E3E4D'   # brand charcoal — muted, dark grey-blue
 
 
 def process_csv_to_excel_from_file(file_path):
@@ -77,7 +77,7 @@ def process_csv_to_excel_from_file(file_path):
         P5_letter      = column_letter(df.columns.get_loc("P5"))          if "P5"          in df.columns else None
 
         input_factor_row = metadata_row_indices.get("Input Factor", 5)
-        offset = len(metadata) + 1  # 0-based row index of the column-header row in the Data sheet
+        offset = len(metadata) + 1   # 0-based row index of the column-header row
 
         # --- Formula columns ---
         def efficiency_formula(row):
@@ -89,12 +89,12 @@ def process_csv_to_excel_from_file(file_path):
         W_raw_eff = column_letter(df.columns.get_loc("EfficiencyRaw"))
 
         if U_letter and T_trend_letter:
-            def eff_a_formula(row):  # Forward (TP Reversed = 1)
+            def eff_a_formula(row):
                 rn = row.name + offset + 2
                 prev_rn = rn - 1 if row.name > 0 else rn
                 return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=1,${U_letter}{prev_rn}=1)),${W_raw_eff}{rn},NA())'
 
-            def eff_b_formula(row):  # Reverse (TP Reversed = 0)
+            def eff_b_formula(row):
                 rn = row.name + offset + 2
                 prev_rn = rn - 1 if row.name > 0 else rn
                 return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=0,${U_letter}{prev_rn}=0)),${W_raw_eff}{rn},NA())'
@@ -105,7 +105,10 @@ def process_csv_to_excel_from_file(file_path):
         # --- Excel output ---
         timestamp = get_export_now().strftime("%m-%d-%Y_%I-%M-%S_%p")
         excel_file = os.path.join(os.path.dirname(file_path), f"TestResults_{timestamp}.xlsx")
-        has_logo = os.path.isfile(LOGO_PATH)
+        has_logo   = os.path.isfile(LOGO_PATH)
+
+        # Formula columns — use header length for width (formula strings are huge)
+        FORMULA_COLS = {"EfficiencyRaw", "Efficiency A", "Efficiency B"}
 
         with pd.ExcelWriter(excel_file, engine="xlsxwriter") as writer:
             pd.DataFrame(metadata).to_excel(writer, index=False, sheet_name="Data", header=False)
@@ -113,106 +116,110 @@ def process_csv_to_excel_from_file(file_path):
             workbook  = writer.book
             worksheet = writer.sheets["Data"]
 
-            # ── Data sheet formats ───────────────────────────────────────────
-            percent_fmt = workbook.add_format({"num_format": "0.0%"})
-
-            # Column headers — charcoal background, white bold text
-            header_fmt = workbook.add_format({
-                "bold": True,
-                "font_color": C_WHITE,
+            # ── Formats ─────────────────────────────────────────────────────
+            percent_fmt  = workbook.add_format({"num_format": "0.0%"})
+            header_fmt   = workbook.add_format({
+                "bold": True, "font_color": C_WHITE,
                 "bg_color": C_CHARCOAL,
-                "border": 1,
-                "border_color": "#1A2733",
+                "border": 1, "border_color": "#1A2733",
             })
+            meta_key_fmt = workbook.add_format({"bold": True, "font_color": C_RED})
+            even_fmt     = workbook.add_format({"bg_color": "#EBF0F5"})   # light blue-grey
+            odd_fmt      = workbook.add_format({"bg_color": C_WHITE})
+
+            # ── Column-header row ────────────────────────────────────────────
             for col_idx, col_name in enumerate(df.columns):
                 worksheet.write(offset, col_idx, col_name, header_fmt)
 
-            # Metadata key labels — red bold
-            meta_key_fmt = workbook.add_format({"bold": True, "font_color": C_RED})
+            # ── Metadata key labels ─────────────────────────────────────────
             for row_idx, row_data in enumerate(metadata):
                 if row_data:
                     worksheet.write(row_idx, 0, row_data[0], meta_key_fmt)
 
-            # Alternating data-row colours via conditional formatting
-            last_row    = len(df) + offset + 1   # 0-based last data row index
-            num_cols    = len(df.columns) - 1
-            data_start  = offset + 1              # 0-based first data row index
+            # ── Auto-fit column widths ──────────────────────────────────────
+            df_str = df.astype(str)
+            for col_idx, col_name in enumerate(df.columns):
+                if col_name in FORMULA_COLS:
+                    # Formula cells display short numbers — size by header name only
+                    col_width = len(col_name) + 2
+                else:
+                    max_data_len = df_str[col_name].map(len).max() if len(df) > 0 else 0
+                    col_width = max(len(col_name), max_data_len) + 2
+                    # Also check metadata values in columns 0 and 1
+                    if col_idx == 0:
+                        col_width = max(col_width, max((len(str(r[0])) for r in metadata if r), default=0) + 2)
+                    elif col_idx == 1:
+                        col_width = max(col_width, max((len(str(r[1])) for r in metadata if len(r) > 1), default=0) + 2)
+                # Cap very wide columns (long step names etc.)
+                col_width = min(col_width, 40)
+                worksheet.set_column(col_idx, col_idx, col_width)
 
-            even_fmt = workbook.add_format({"bg_color": "#EBF0F5"})  # light blue-grey
-            odd_fmt  = workbook.add_format({"bg_color": C_WHITE})
-
-            worksheet.conditional_format(data_start, 0, last_row, num_cols, {
-                "type": "formula",
-                "criteria": "=MOD(ROW(),2)=0",
-                "format": even_fmt,
-            })
-            worksheet.conditional_format(data_start, 0, last_row, num_cols, {
-                "type": "formula",
-                "criteria": "=MOD(ROW(),2)=1",
-                "format": odd_fmt,
-            })
-
+            # Re-apply percent format to efficiency columns after set_column
             if "Efficiency A" in df.columns and "Efficiency B" in df.columns:
                 worksheet.set_column(df.columns.get_loc("Efficiency A"),
-                                     df.columns.get_loc("Efficiency B"), 13, percent_fmt)
+                                     df.columns.get_loc("Efficiency B"), 14, percent_fmt)
 
-            # Logo on Data sheet — right side of metadata block, clearly visible
-            if has_logo:
-                worksheet.insert_image(0, 9, LOGO_PATH, {
-                    "x_scale": 0.28,
-                    "y_scale": 0.28,
-                    "object_position": 3,
-                })
+            # ── Alternating row colours ─────────────────────────────────────
+            last_row   = len(df) + offset + 1   # 0-based last data row
+            num_cols   = len(df.columns) - 1
+            data_start = offset + 1              # 0-based first data row
+            worksheet.conditional_format(data_start, 0, last_row, num_cols, {
+                "type": "formula", "criteria": "=MOD(ROW(),2)=0", "format": even_fmt,
+            })
+            worksheet.conditional_format(data_start, 0, last_row, num_cols, {
+                "type": "formula", "criteria": "=MOD(ROW(),2)=1", "format": odd_fmt,
+            })
 
             worksheet.autofilter(offset, 0, last_row, num_cols)
 
+            # ── Logo on Data sheet — prominent, upper-right of metadata ─────
+            if has_logo:
+                worksheet.insert_image(0, 9, LOGO_PATH, {
+                    "x_scale": 0.45,
+                    "y_scale": 0.45,
+                    "object_position": 3,
+                })
+
             # ── Chart ────────────────────────────────────────────────────────
             if len(df) > 0:
-                first_row = offset + 2
+                first_row  = offset + 2
                 chart_last = len(df) + offset + 1
 
                 def time_cats():
                     return f"=Data!${B_letter}${first_row}:${B_letter}${chart_last}"
 
-                # Primary: area chart — P1 and P5 pressure bands
+                # Primary area chart — P5 behind P1 so P1 is always visible on top
                 chart = workbook.add_chart({"type": "area"})
 
-                if P1_letter:
-                    chart.add_series({
-                        "name": "P1 Pressure",
-                        "categories": time_cats(),
-                        "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${chart_last}",
-                        "fill":   {"color": C_P1, "transparency": 10},
-                        "border": {"none": True},
-                    })
                 if P5_letter:
                     chart.add_series({
                         "name": "P5 Pressure",
                         "categories": time_cats(),
                         "values": f"=Data!${P5_letter}${first_row}:${P5_letter}${chart_last}",
-                        "fill":   {"color": C_P5, "transparency": 5},
+                        "fill":   {"color": C_P5, "transparency": 15},
+                        "border": {"none": True},
+                    })
+                if P1_letter:
+                    chart.add_series({
+                        "name": "P1 Pressure",
+                        "categories": time_cats(),
+                        "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${chart_last}",
+                        "fill":   {"color": C_P1, "transparency": 15},
                         "border": {"none": True},
                     })
 
-                # LC Setpoint — amber dashed reference line, no area fill
-                if H_lc_letter:
-                    chart.add_series({
-                        "name": "LC Setpoint",
-                        "categories": time_cats(),
-                        "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
-                        "fill":   {"none": True},
-                        "border": {"color": C_AMBER, "width": 1.75, "dash_type": "dash"},
-                    })
-
-                # Secondary: line chart — efficiency on right axis
+                # Secondary line chart — efficiency (y2) and LC Setpoint (y1, drawn last = on top)
+                # Configuring the y2 axis on line_chart BEFORE combining is required for
+                # white axis labels to render correctly in combined charts.
                 line_chart = workbook.add_chart({"type": "line"})
+
                 if "Efficiency A" in df.columns:
                     col_ea = column_letter(df.columns.get_loc("Efficiency A"))
                     line_chart.add_series({
                         "name": "Forward Efficiency",
                         "categories": time_cats(),
                         "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
-                        "line":  {"color": C_WHITE, "width": 2.5},
+                        "line":  {"color": C_WHITE, "width": 1.75},
                         "y2_axis": True,
                     })
                 if "Efficiency B" in df.columns:
@@ -221,20 +228,38 @@ def process_csv_to_excel_from_file(file_path):
                         "name": "Reverse Efficiency",
                         "categories": time_cats(),
                         "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
-                        "line":  {"color": C_RED, "width": 2.5},
+                        "line":  {"color": C_RED, "width": 1.75},
                         "y2_axis": True,
                     })
+
+                # LC Setpoint added LAST to line_chart so it renders on top of everything.
+                # y2_axis=False keeps it on the primary (PSI) scale.
+                if H_lc_letter:
+                    line_chart.add_series({
+                        "name": "LC Setpoint",
+                        "categories": time_cats(),
+                        "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
+                        "line":  {"color": C_AMBER, "width": 1.75, "dash_type": "dash"},
+                        "y2_axis": False,
+                    })
+
+                # Set y2 axis on line_chart BEFORE combining — this is required for
+                # the white font colour to apply correctly to the right-hand axis labels.
+                line_chart.set_y_axis({
+                    "name": "Efficiency %",
+                    "name_font": {"color": C_WHITE},
+                    "num_font":  {"color": C_WHITE},
+                    "min": 0, "max": 1.1, "major_unit": 0.1,
+                    "num_format": "0%",
+                    "major_gridlines": {"visible": False},
+                })
+
                 chart.combine(line_chart)
 
-                # Charcoal chart area, very-dark-navy plot area — no white borders
-                chart.set_chartarea({
-                    "fill":   {"color": C_CHARCOAL},
-                    "border": {"none": True},
-                })
-                chart.set_plotarea({
-                    "fill":   {"color": "#0D1421"},   # near-black — P1/P5 colours pop against this
-                    "border": {"none": True},
-                })
+                # Chart / plot area theming
+                chart.set_chartarea({"fill": {"color": C_CHARCOAL}, "border": {"none": True}})
+                chart.set_plotarea( {"fill": {"color": "#0D1421"},   "border": {"none": True}})
+
                 chart.set_title({
                     "name": "Open Loop Pump Test: Pressure & Efficiency",
                     "name_font": {"color": C_RED, "size": 16, "bold": True},
@@ -254,6 +279,7 @@ def process_csv_to_excel_from_file(file_path):
                     "min": 0, "max": 3500,
                     "major_gridlines": {"visible": True, "line": {"color": "#3D5166"}},
                 })
+                # Also call set_y2_axis on the primary chart for belt-and-suspenders
                 chart.set_y2_axis({
                     "name": "Efficiency %",
                     "name_font": {"color": C_WHITE},
@@ -267,25 +293,25 @@ def process_csv_to_excel_from_file(file_path):
                     "font": {"color": C_WHITE},
                 })
 
-                # Chart worksheet — logo at top, chart below it
+                # Chart sheet: chart fills from A1, logo sits to the RIGHT of the chart.
+                # Chart width at x_scale=3.0 is ~1440px; logo starts at 1460px from A1.
+                CHART_SCALE_X = 3.0
+                CHART_SCALE_Y = 2.9
+                LOGO_SCALE    = 0.45                    # 546*0.45 = 246px wide, 324*0.45 = 146px tall
+                LOGO_X_OFFSET = int(480 * CHART_SCALE_X) + 30   # 30px gap after chart
+
                 chart_ws = workbook.add_worksheet("Report Chart")
                 chart_ws.hide_gridlines(2)
-
-                # Logo row: give it enough height to show the logo clearly
-                LOGO_ROW_HEIGHT_PT = 80   # points (~107 px) — logo at 0.28 scale = 91px tall
-                chart_ws.set_row(0, LOGO_ROW_HEIGHT_PT)
+                chart_ws.insert_chart("A1", chart, {"x_scale": CHART_SCALE_X, "y_scale": CHART_SCALE_Y})
 
                 if has_logo:
                     chart_ws.insert_image("A1", LOGO_PATH, {
-                        "x_scale": 0.28,
-                        "y_scale": 0.28,
-                        "x_offset": 10,
-                        "y_offset": 10,
+                        "x_scale": LOGO_SCALE,
+                        "y_scale": LOGO_SCALE,
+                        "x_offset": LOGO_X_OFFSET,
+                        "y_offset": 30,
                         "object_position": 3,
                     })
-
-                # Chart starts at row 1 (A2), fills the rest of the visible window
-                chart_ws.insert_chart("A2", chart, {"x_scale": 3.2, "y_scale": 2.65})
 
         return excel_file
 
