@@ -293,19 +293,21 @@ def process_csv_to_excel_from_file(file_path):
                     "font": {"color": C_WHITE},
                 })
 
-                # Chart sheet: chart fills from A1, logo sits to the RIGHT of the chart.
-                # Chart width at x_scale=3.0 is ~1440px; logo starts at 1460px from A1.
-                CHART_SCALE_X = 3.0
-                CHART_SCALE_Y = 2.9
-                LOGO_SCALE    = 0.45                    # 546*0.45 = 246px wide, 324*0.45 = 146px tall
-                LOGO_X_OFFSET = int(480 * CHART_SCALE_X) + 30   # 30px gap after chart
+                # Chart sheet: chart at A1, logo anchored at column 24 (just past the
+                # chart's ~1440px width). x_offset MUST stay ≤ 1023 or xlsxwriter
+                # writes invalid drawing XML — never compute it from chart scale again.
+                CHART_SCALE_X  = 3.0
+                CHART_SCALE_Y  = 2.9
+                LOGO_SCALE     = 0.45   # 546*0.45=246px wide, 324*0.45=146px tall
+                LOGO_COL       = 23     # col index 23 (~1449px from A1) clears the 1440px chart
+                LOGO_X_OFFSET  = 20     # small gap, well within the 1023-pixel limit
 
                 chart_ws = workbook.add_worksheet("Report Chart")
                 chart_ws.hide_gridlines(2)
                 chart_ws.insert_chart("A1", chart, {"x_scale": CHART_SCALE_X, "y_scale": CHART_SCALE_Y})
 
                 if has_logo:
-                    chart_ws.insert_image("A1", LOGO_PATH, {
+                    chart_ws.insert_image(0, LOGO_COL, LOGO_PATH, {
                         "x_scale": LOGO_SCALE,
                         "y_scale": LOGO_SCALE,
                         "x_offset": LOGO_X_OFFSET,
