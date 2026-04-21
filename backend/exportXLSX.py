@@ -188,17 +188,18 @@ def process_csv_to_excel_from_file(file_path):
                 def time_cats():
                     return f"=Data!${B_letter}${first_row}:${B_letter}${chart_last}"
 
-                # Single area chart — no combine() needed.
-                # Series draw order (first = furthest back, last = on top):
-                #   1. Efficiency A & B  → background, semi-transparent, y2 axis
-                #   2. P5 Pressure       → mid-layer
-                #   3. P1 Pressure       → mid-layer (in front of P5)
-                #   4. LC Setpoint       → top layer, line-only (fill=none)
+                # Layer order fix — Excel always draws secondary-axis series on top
+                # of primary-axis series, regardless of insertion order.  The only
+                # reliable solution is to make efficiency the PRIMARY chart (drawn
+                # first = background) and combine pressure+LC as the SECONDARY chart
+                # (drawn on top = foreground).
+                #
+                # Side-effect: Efficiency % axis moves to the LEFT, PSI to the RIGHT.
+                # That is acceptable and the only way to guarantee correct layering.
+
+                # PRIMARY chart — efficiency bands (background)
                 chart = workbook.add_chart({"type": "area"})
 
-                # Efficiency bands — drawn first so they sit behind everything.
-                # High transparency (70 %) keeps them subtle; the border gives a
-                # visible edge without the solid-scribble look of opaque lines.
                 if "Efficiency A" in df.columns:
                     col_ea = column_letter(df.columns.get_loc("Efficiency A"))
                     chart.add_series({
@@ -207,7 +208,6 @@ def process_csv_to_excel_from_file(file_path):
                         "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
                         "fill":   {"color": C_WHITE, "transparency": 70},
                         "border": {"color": C_WHITE, "width": 1.0},
-                        "y2_axis": True,
                     })
                 if "Efficiency B" in df.columns:
                     col_eb = column_letter(df.columns.get_loc("Efficiency B"))
@@ -217,12 +217,16 @@ def process_csv_to_excel_from_file(file_path):
                         "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
                         "fill":   {"color": C_RED, "transparency": 70},
                         "border": {"color": C_RED, "width": 1.0},
-                        "y2_axis": True,
                     })
 
-                # Pressure bands — drawn on top of efficiency.
+                # SECONDARY chart — pressure bands + LC Setpoint (foreground).
+                # Combined secondary series automatically use the y2 axis (PSI, right).
+                # LC Setpoint is added last within the secondary chart so it sits on
+                # top of the pressure bands.
+                fg = workbook.add_chart({"type": "area"})
+
                 if P5_letter:
-                    chart.add_series({
+                    fg.add_series({
                         "name": "P5 Pressure",
                         "categories": time_cats(),
                         "values": f"=Data!${P5_letter}${first_row}:${P5_letter}${chart_last}",
@@ -230,18 +234,15 @@ def process_csv_to_excel_from_file(file_path):
                         "border": {"none": True},
                     })
                 if P1_letter:
-                    chart.add_series({
+                    fg.add_series({
                         "name": "P1 Pressure",
                         "categories": time_cats(),
                         "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${chart_last}",
                         "fill":   {"color": C_P1, "transparency": 15},
                         "border": {"none": True},
                     })
-
-                # LC Setpoint — added last so it renders above everything else.
-                # fill=none means only the amber dashed border line is visible.
                 if H_lc_letter:
-                    chart.add_series({
+                    fg.add_series({
                         "name": "LC Setpoint",
                         "categories": time_cats(),
                         "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
@@ -249,7 +250,14 @@ def process_csv_to_excel_from_file(file_path):
                         "border": {"color": C_AMBER, "width": 1.75, "dash_type": "dash"},
                     })
 
-                # Axis and theme styling
+                has_efficiency = "Efficiency A" in df.columns or "Efficiency B" in df.columns
+                if has_efficiency:
+                    chart.combine(fg)
+                else:
+                    # No efficiency data — fg becomes the sole chart; discard empty primary
+                    chart = fg
+
+                # All axis/theme config on the primary chart after combining
                 chart.set_chartarea({"fill": {"color": C_CHARCOAL}, "border": {"none": True}})
                 chart.set_plotarea( {"fill": {"color": "#0D1421"},   "border": {"none": True}})
                 chart.set_title({
@@ -263,22 +271,34 @@ def process_csv_to_excel_from_file(file_path):
                     "line":      {"color": C_WHITE},
                     "major_gridlines": {"visible": False},
                 })
-                chart.set_y_axis({
-                    "name": "PSI",
-                    "name_font": {"color": C_WHITE},
-                    "num_font":  {"color": C_WHITE},
-                    "line":      {"color": C_WHITE},
-                    "min": 0, "max": 3500,
-                    "major_gridlines": {"visible": True, "line": {"color": "#3D5166"}},
-                })
-                chart.set_y2_axis({
-                    "name": "Efficiency %",
-                    "name_font": {"color": C_WHITE},
-                    "num_font":  {"color": C_WHITE},
-                    "min": 0, "max": 1.1, "major_unit": 0.1,
-                    "num_format": "0%",
-                    "major_gridlines": {"visible": False},
-                })
+                if has_efficiency:
+                    # Primary (left) = Efficiency %, secondary (right) = PSI
+                    chart.set_y_axis({
+                        "name": "Efficiency %",
+                        "name_font": {"color": C_WHITE},
+                        "num_font":  {"color": C_WHITE},
+                        "line":      {"color": C_WHITE},
+                        "min": 0, "max": 1.1, "major_unit": 0.1,
+                        "num_format": "0%",
+                        "major_gridlines": {"visible": False},
+                    })
+                    chart.set_y2_axis({
+                        "name": "PSI",
+                        "name_font": {"color": C_WHITE},
+                        "num_font":  {"color": C_WHITE},
+                        "min": 0, "max": 3500,
+                        "major_gridlines": {"visible": True, "line": {"color": "#3D5166"}},
+                    })
+                else:
+                    # No efficiency data — single PSI axis on the left
+                    chart.set_y_axis({
+                        "name": "PSI",
+                        "name_font": {"color": C_WHITE},
+                        "num_font":  {"color": C_WHITE},
+                        "line":      {"color": C_WHITE},
+                        "min": 0, "max": 3500,
+                        "major_gridlines": {"visible": True, "line": {"color": "#3D5166"}},
+                    })
                 chart.set_legend({
                     "position": "bottom",
                     "font": {"color": C_WHITE},
