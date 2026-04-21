@@ -4,17 +4,21 @@ import csv
 import os
 from backend.time_utils import get_export_now
 
-# Primary logo location. Falls back to the frontend public folder if not found.
-_ASSETS_LOGO = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
+# Primary logo location — drop your CE Energy PNG here to override the fallback.
+_ASSETS_LOGO   = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
 _FALLBACK_LOGO = os.path.join(os.path.dirname(__file__), "..", "frontend", "teststandfrontend", "public", "logo.png")
 LOGO_PATH = _ASSETS_LOGO if os.path.isfile(_ASSETS_LOGO) else _FALLBACK_LOGO
 
 # Brand palette
 C_RED      = '#EB1C23'  # Primary
-C_BLACK    = '#000000'  # Secondary
-C_WHITE    = '#FFFFFF'  # Secondary
+C_BLACK    = '#000000'
+C_WHITE    = '#FFFFFF'
 C_CHARCOAL = '#2E3E4D'  # Secondary
 C_AMBER    = '#ECA400'  # Accent — use sparingly
+
+# Pressure area colours — clearly visible against the dark plot background
+C_P1 = '#3D6B8A'   # medium steel-blue
+C_P5 = '#2A5070'   # darker steel-blue
 
 
 def process_csv_to_excel_from_file(file_path):
@@ -47,7 +51,7 @@ def process_csv_to_excel_from_file(file_path):
                 data_lines.append(row)
 
         if not header_row_found:
-            raise ValueError("Failed to find the data header row in the CSV file (needs at least Time and S1).")
+            raise ValueError("Failed to find the data header row (needs at least Time and S1).")
 
         df = pd.read_csv(io.StringIO("\n".join([",".join(map(str, row)) for row in data_lines])))
 
@@ -62,7 +66,7 @@ def process_csv_to_excel_from_file(file_path):
                 idx = idx // 26 - 1
             return letter
 
-        # Column mapping — optional columns guarded with None fallback
+        # Column mapping — optional columns get None if absent
         S1_letter      = column_letter(df.columns.get_loc("S1"))
         F1_letter      = column_letter(df.columns.get_loc("F1"))
         B_letter       = column_letter(df.columns.get_loc("Time"))
@@ -73,7 +77,7 @@ def process_csv_to_excel_from_file(file_path):
         P5_letter      = column_letter(df.columns.get_loc("P5"))          if "P5"          in df.columns else None
 
         input_factor_row = metadata_row_indices.get("Input Factor", 5)
-        offset = len(metadata) + 1  # blank row between metadata and data headers
+        offset = len(metadata) + 1  # 0-based row index of the column-header row in the Data sheet
 
         # --- Formula columns ---
         def efficiency_formula(row):
@@ -109,85 +113,106 @@ def process_csv_to_excel_from_file(file_path):
             workbook  = writer.book
             worksheet = writer.sheets["Data"]
 
-            # --- Formats ---
+            # ── Data sheet formats ───────────────────────────────────────────
             percent_fmt = workbook.add_format({"num_format": "0.0%"})
 
-            # Styled column-header row (charcoal blue background, white bold text)
+            # Column headers — charcoal background, white bold text
             header_fmt = workbook.add_format({
                 "bold": True,
                 "font_color": C_WHITE,
                 "bg_color": C_CHARCOAL,
                 "border": 1,
-                "border_color": C_BLACK,
+                "border_color": "#1A2733",
             })
             for col_idx, col_name in enumerate(df.columns):
                 worksheet.write(offset, col_idx, col_name, header_fmt)
 
-            # Metadata label styling (red, bold)
+            # Metadata key labels — red bold
             meta_key_fmt = workbook.add_format({"bold": True, "font_color": C_RED})
             for row_idx, row_data in enumerate(metadata):
                 if row_data:
                     worksheet.write(row_idx, 0, row_data[0], meta_key_fmt)
 
-            # Efficiency columns as percent
+            # Alternating data-row colours via conditional formatting
+            last_row    = len(df) + offset + 1   # 0-based last data row index
+            num_cols    = len(df.columns) - 1
+            data_start  = offset + 1              # 0-based first data row index
+
+            even_fmt = workbook.add_format({"bg_color": "#EBF0F5"})  # light blue-grey
+            odd_fmt  = workbook.add_format({"bg_color": C_WHITE})
+
+            worksheet.conditional_format(data_start, 0, last_row, num_cols, {
+                "type": "formula",
+                "criteria": "=MOD(ROW(),2)=0",
+                "format": even_fmt,
+            })
+            worksheet.conditional_format(data_start, 0, last_row, num_cols, {
+                "type": "formula",
+                "criteria": "=MOD(ROW(),2)=1",
+                "format": odd_fmt,
+            })
+
             if "Efficiency A" in df.columns and "Efficiency B" in df.columns:
                 worksheet.set_column(df.columns.get_loc("Efficiency A"),
                                      df.columns.get_loc("Efficiency B"), 13, percent_fmt)
 
-            # Logo on Data sheet — upper-right of the metadata block
+            # Logo on Data sheet — right side of metadata block, clearly visible
             if has_logo:
-                worksheet.insert_image(0, 5, LOGO_PATH, {
-                    "x_scale": 0.07,
-                    "y_scale": 0.07,
+                worksheet.insert_image(0, 9, LOGO_PATH, {
+                    "x_scale": 0.28,
+                    "y_scale": 0.28,
                     "object_position": 3,
                 })
 
-            # --- Chart ---
+            worksheet.autofilter(offset, 0, last_row, num_cols)
+
+            # ── Chart ────────────────────────────────────────────────────────
             if len(df) > 0:
-                first_row, last_row = offset + 2, len(df) + offset + 1
+                first_row = offset + 2
+                chart_last = len(df) + offset + 1
 
                 def time_cats():
-                    return f"=Data!${B_letter}${first_row}:${B_letter}${last_row}"
+                    return f"=Data!${B_letter}${first_row}:${B_letter}${chart_last}"
 
-                # Primary area chart — P1 and P5 pressure bands
+                # Primary: area chart — P1 and P5 pressure bands
                 chart = workbook.add_chart({"type": "area"})
 
                 if P1_letter:
                     chart.add_series({
                         "name": "P1 Pressure",
                         "categories": time_cats(),
-                        "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${last_row}",
-                        "fill": {"color": C_CHARCOAL, "transparency": 20},
+                        "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${chart_last}",
+                        "fill":   {"color": C_P1, "transparency": 10},
                         "border": {"none": True},
                     })
                 if P5_letter:
                     chart.add_series({
                         "name": "P5 Pressure",
                         "categories": time_cats(),
-                        "values": f"=Data!${P5_letter}${first_row}:${P5_letter}${last_row}",
-                        "fill": {"color": C_CHARCOAL, "transparency": 45},
+                        "values": f"=Data!${P5_letter}${first_row}:${P5_letter}${chart_last}",
+                        "fill":   {"color": C_P5, "transparency": 5},
                         "border": {"none": True},
                     })
 
-                # LC Setpoint — line only (amber dashed), no area fill
+                # LC Setpoint — amber dashed reference line, no area fill
                 if H_lc_letter:
                     chart.add_series({
                         "name": "LC Setpoint",
                         "categories": time_cats(),
-                        "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${last_row}",
-                        "fill": {"none": True},          # no area blob
-                        "border": {"color": C_AMBER, "width": 1.5, "dash_type": "dash"},
+                        "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
+                        "fill":   {"none": True},
+                        "border": {"color": C_AMBER, "width": 1.75, "dash_type": "dash"},
                     })
 
-                # Efficiency lines on secondary axis
+                # Secondary: line chart — efficiency on right axis
                 line_chart = workbook.add_chart({"type": "line"})
                 if "Efficiency A" in df.columns:
                     col_ea = column_letter(df.columns.get_loc("Efficiency A"))
                     line_chart.add_series({
                         "name": "Forward Efficiency",
                         "categories": time_cats(),
-                        "values": f"=Data!${col_ea}${first_row}:${col_ea}${last_row}",
-                        "line": {"color": C_WHITE, "width": 2.5},
+                        "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
+                        "line":  {"color": C_WHITE, "width": 2.5},
                         "y2_axis": True,
                     })
                 if "Efficiency B" in df.columns:
@@ -195,23 +220,21 @@ def process_csv_to_excel_from_file(file_path):
                     line_chart.add_series({
                         "name": "Reverse Efficiency",
                         "categories": time_cats(),
-                        "values": f"=Data!${col_eb}${first_row}:${col_eb}${last_row}",
-                        "line": {"color": C_RED, "width": 2.5},
+                        "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
+                        "line":  {"color": C_RED, "width": 2.5},
                         "y2_axis": True,
                     })
                 chart.combine(line_chart)
 
-                # Chart area: charcoal blue background, no border (removes white outline)
+                # Charcoal chart area, very-dark-navy plot area — no white borders
                 chart.set_chartarea({
-                    "fill": {"color": C_CHARCOAL},
+                    "fill":   {"color": C_CHARCOAL},
                     "border": {"none": True},
                 })
-                # Plot area: darker navy so data stands out
                 chart.set_plotarea({
-                    "fill": {"color": "#1A2733"},
+                    "fill":   {"color": "#0D1421"},   # near-black — P1/P5 colours pop against this
                     "border": {"none": True},
                 })
-
                 chart.set_title({
                     "name": "Open Loop Pump Test: Pressure & Efficiency",
                     "name_font": {"color": C_RED, "size": 16, "bold": True},
@@ -244,21 +267,25 @@ def process_csv_to_excel_from_file(file_path):
                     "font": {"color": C_WHITE},
                 })
 
-                # Embed chart in a regular worksheet so the logo can sit alongside it
+                # Chart worksheet — logo at top, chart below it
                 chart_ws = workbook.add_worksheet("Report Chart")
                 chart_ws.hide_gridlines(2)
-                chart_ws.insert_chart("A1", chart, {"x_scale": 3.2, "y_scale": 2.8})
+
+                # Logo row: give it enough height to show the logo clearly
+                LOGO_ROW_HEIGHT_PT = 80   # points (~107 px) — logo at 0.28 scale = 91px tall
+                chart_ws.set_row(0, LOGO_ROW_HEIGHT_PT)
 
                 if has_logo:
-                    chart_ws.insert_image(0, 0, LOGO_PATH, {
-                        "x_scale": 0.06,
-                        "y_scale": 0.06,
-                        "x_offset": 1310,
+                    chart_ws.insert_image("A1", LOGO_PATH, {
+                        "x_scale": 0.28,
+                        "y_scale": 0.28,
+                        "x_offset": 10,
                         "y_offset": 10,
                         "object_position": 3,
                     })
 
-            worksheet.autofilter(offset, 0, last_row, len(df.columns) - 1)
+                # Chart starts at row 1 (A2), fills the rest of the visible window
+                chart_ws.insert_chart("A2", chart, {"x_scale": 3.2, "y_scale": 2.65})
 
         return excel_file
 
