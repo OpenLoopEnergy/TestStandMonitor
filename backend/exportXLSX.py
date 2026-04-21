@@ -48,8 +48,8 @@ def process_csv_to_excel_from_file(file_path):
         # Column Mapping
         S1_letter = column_letter(df.columns.get_loc("S1"))
         F1_letter = column_letter(df.columns.get_loc("F1"))
-        U_letter = column_letter(df.columns.get_loc("TP Reversed"))
-        T_trend_letter = column_letter(df.columns.get_loc("Trending"))
+        U_letter = column_letter(df.columns.get_loc("TP Reversed")) if "TP Reversed" in df.columns else None
+        T_trend_letter = column_letter(df.columns.get_loc("Trending")) if "Trending" in df.columns else None
         H_lc_letter = column_letter(df.columns.get_loc("LCSetpoint"))
         P1_letter = column_letter(df.columns.get_loc("P1"))
         P5_letter = column_letter(df.columns.get_loc("P5"))
@@ -64,18 +64,19 @@ def process_csv_to_excel_from_file(file_path):
         df["EfficiencyRaw"] = df.apply(efficiency_formula, axis=1)
         W_raw_eff = column_letter(df.columns.get_loc("EfficiencyRaw"))
 
-        def eff_a_formula(row): # Forward
-            rn = row.name + offset + 2
-            prev_rn = rn - 1 if row.name > 0 else rn
-            return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=1,${U_letter}{prev_rn}=1)),${W_raw_eff}{rn},NA())'
+        if U_letter and T_trend_letter:
+            def eff_a_formula(row):  # Forward
+                rn = row.name + offset + 2
+                prev_rn = rn - 1 if row.name > 0 else rn
+                return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=1,${U_letter}{prev_rn}=1)),${W_raw_eff}{rn},NA())'
 
-        def eff_b_formula(row): # Reverse
-            rn = row.name + offset + 2
-            prev_rn = rn - 1 if row.name > 0 else rn
-            return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=0,${U_letter}{prev_rn}=0)),${W_raw_eff}{rn},NA())'
+            def eff_b_formula(row):  # Reverse
+                rn = row.name + offset + 2
+                prev_rn = rn - 1 if row.name > 0 else rn
+                return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=0,${U_letter}{prev_rn}=0)),${W_raw_eff}{rn},NA())'
 
-        df["Efficiency A"] = df.apply(eff_a_formula, axis=1)
-        df["Efficiency B"] = df.apply(eff_b_formula, axis=1)
+            df["Efficiency A"] = df.apply(eff_a_formula, axis=1)
+            df["Efficiency B"] = df.apply(eff_b_formula, axis=1)
 
         # 2. Excel Generation
         timestamp = get_export_now().strftime("%m-%d-%Y_%I-%M-%S_%p")
@@ -104,7 +105,8 @@ def process_csv_to_excel_from_file(file_path):
 
             # Column formatting
             percent_fmt = workbook.add_format({"num_format": "0.0%"})
-            worksheet.set_column(df.columns.get_loc("Efficiency A"), df.columns.get_loc("Efficiency B"), 12, percent_fmt)
+            if "Efficiency A" in df.columns and "Efficiency B" in df.columns:
+                worksheet.set_column(df.columns.get_loc("Efficiency A"), df.columns.get_loc("Efficiency B"), 12, percent_fmt)
 
             # Logo on Data sheet — top-right of the metadata block
             if has_logo:
@@ -139,20 +141,22 @@ def process_csv_to_excel_from_file(file_path):
 
                 # Efficiency Lines (Secondary Axis)
                 line_chart = workbook.add_chart({'type': 'line'})
-                col_ea = column_letter(df.columns.get_loc("Efficiency A"))
-                line_chart.add_series({
-                    'name': 'Forward Efficiency',
-                    'values': f"=Data!${col_ea}${first_row}:${col_ea}${last_row}",
-                    'line': {'color': eff_fwd, 'width': 2.5},
-                    'y2_axis': True,
-                })
-                col_eb = column_letter(df.columns.get_loc("Efficiency B"))
-                line_chart.add_series({
-                    'name': 'Reverse Efficiency',
-                    'values': f"=Data!${col_eb}${first_row}:${col_eb}${last_row}",
-                    'line': {'color': eff_rev, 'width': 2.5},
-                    'y2_axis': True,
-                })
+                if "Efficiency A" in df.columns:
+                    col_ea = column_letter(df.columns.get_loc("Efficiency A"))
+                    line_chart.add_series({
+                        'name': 'Forward Efficiency',
+                        'values': f"=Data!${col_ea}${first_row}:${col_ea}${last_row}",
+                        'line': {'color': eff_fwd, 'width': 2.5},
+                        'y2_axis': True,
+                    })
+                if "Efficiency B" in df.columns:
+                    col_eb = column_letter(df.columns.get_loc("Efficiency B"))
+                    line_chart.add_series({
+                        'name': 'Reverse Efficiency',
+                        'values': f"=Data!${col_eb}${first_row}:${col_eb}${last_row}",
+                        'line': {'color': eff_rev, 'width': 2.5},
+                        'y2_axis': True,
+                    })
                 chart.combine(line_chart)
 
                 # Theme Application
@@ -203,9 +207,6 @@ def process_csv_to_excel_from_file(file_path):
                         'y_offset': 12,
                         'object_position': 3,
                     })
-
-                chartsheet = workbook.add_chartsheet("Report Chart")
-                chartsheet.set_chart(chart)
                 
                 # Setup filter so user can collapse gaps via "Trending"
                 worksheet.autofilter(offset, 0, last_row, len(df.columns) - 1)
