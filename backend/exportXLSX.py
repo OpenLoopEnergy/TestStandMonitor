@@ -17,8 +17,8 @@ C_CHARCOAL = '#2E3E4D'
 C_AMBER    = '#ECA400'   # accent — sparingly
 
 # Pressure band colours — clearly distinct from each other and from the dark plot background
-C_P1 = '#4472C4'   # office blue  — bright, clearly different from charcoal
-C_P5 = '#2E3E4D'   # brand charcoal — muted, dark grey-blue
+C_P1 = '#4472C4'   # office blue
+C_P5 = '#1B6B8A'   # teal — distinct from both P1 blue and the charcoal chart background
 
 
 def process_csv_to_excel_from_file(file_path):
@@ -255,6 +255,16 @@ def process_csv_to_excel_from_file(file_path):
 
                 has_efficiency = "Efficiency A" in df.columns or "Efficiency B" in df.columns
                 if has_efficiency:
+                    # Configure fg's y-axis (which becomes the right/PSI axis after combine)
+                    # BEFORE combining. Calling set_y2_axis on the primary chart after
+                    # combining does not reliably apply font colours in xlsxwriter.
+                    fg.set_y_axis({
+                        "name": "PSI",
+                        "name_font": {"color": C_WHITE},
+                        "num_font":  {"color": C_WHITE},
+                        "min": 0, "max": 3500,
+                        "major_gridlines": {"visible": True, "line": {"color": "#3D5166"}},
+                    })
                     chart.combine(fg)
                 else:
                     # No efficiency data — fg becomes the sole chart; discard empty primary
@@ -275,7 +285,7 @@ def process_csv_to_excel_from_file(file_path):
                     "major_gridlines": {"visible": False},
                 })
                 if has_efficiency:
-                    # Primary (left) = Efficiency %, secondary (right) = PSI
+                    # Left axis = Efficiency % (primary chart's y-axis)
                     chart.set_y_axis({
                         "name": "Efficiency %",
                         "name_font": {"color": C_WHITE},
@@ -285,13 +295,7 @@ def process_csv_to_excel_from_file(file_path):
                         "num_format": "0%",
                         "major_gridlines": {"visible": False},
                     })
-                    chart.set_y2_axis({
-                        "name": "PSI",
-                        "name_font": {"color": C_WHITE},
-                        "num_font":  {"color": C_WHITE},
-                        "min": 0, "max": 3500,
-                        "major_gridlines": {"visible": True, "line": {"color": "#3D5166"}},
-                    })
+                    # Right axis (PSI) was already configured on fg before combine above.
                 else:
                     # No efficiency data — single PSI axis on the left
                     chart.set_y_axis({

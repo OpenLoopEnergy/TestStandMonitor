@@ -37,6 +37,7 @@ export default function Dashboard() {
   const [efficiencyHistory, setEfficiencyHistory] = useState<SignalPoint[]>([])
   const [logRows, setLogRows] = useState<LogRow[]>([])
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+  const [isExporting, setIsExporting] = useState(false)
   const [showClearModal, setShowClearModal] = useState(false)
   const [countdown, setCountdown] = useState(AUTO_CLEAR_SECONDS)
   const prevPb4 = useRef<number>(1)
@@ -170,6 +171,7 @@ export default function Dashboard() {
   }, [])
 
   async function handleExport() {
+    setIsExporting(true)
     try {
       const res = await fetch('/export_data', { method: 'POST' })
       if (!res.ok) {
@@ -187,6 +189,8 @@ export default function Dashboard() {
       showToast('success', 'Exported successfully.')
     } catch (e) {
       showToast('error', `Export failed: ${e}`)
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -203,6 +207,17 @@ export default function Dashboard() {
 
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-[#1a1a1a] text-white">
+
+      {/* ── Export Loading Overlay ── */}
+      {isExporting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#232323] border border-white/10 rounded-2xl px-10 py-8 flex flex-col items-center gap-4 shadow-2xl">
+            <div className="w-10 h-10 border-4 border-white/20 border-t-red-500 rounded-full animate-spin" />
+            <p className="text-white font-semibold text-base">Building Export…</p>
+            <p className="text-gray-400 text-sm">Generating Excel file, this may take a moment.</p>
+          </div>
+        </div>
+      )}
 
       {/* ── Auto-clear Modal ── */}
       {isAdmin && showClearModal && (
@@ -384,9 +399,9 @@ export default function Dashboard() {
                 <p className="text-[10px] text-gray-500">Populates when Trending · last 20 rows</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={handleExport}
-                  className="cursor-pointer text-sm bg-red-700 hover:bg-red-600 px-5 py-2.5 rounded-lg font-semibold transition-colors">
-                  Export Data
+                <button onClick={handleExport} disabled={isExporting}
+                  className="cursor-pointer text-sm bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2.5 rounded-lg font-semibold transition-colors">
+                  {isExporting ? 'Exporting…' : 'Export Data'}
                 </button>
                 {isAdmin && (
                   <button onClick={handleClear}
