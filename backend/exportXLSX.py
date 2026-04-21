@@ -172,11 +172,11 @@ def process_csv_to_excel_from_file(file_path):
 
             worksheet.autofilter(offset, 0, last_row, num_cols)
 
-            # ── Logo on Data sheet — prominent, upper-right of metadata ─────
+            # ── Logo on Data sheet — full native size (546×324 px) ──────────
             if has_logo:
                 worksheet.insert_image(0, 9, LOGO_PATH, {
-                    "x_scale": 0.45,
-                    "y_scale": 0.45,
+                    "x_scale": 1.0,
+                    "y_scale": 1.0,
                     "object_position": 3,
                 })
 
@@ -188,12 +188,39 @@ def process_csv_to_excel_from_file(file_path):
                 def time_cats():
                     return f"=Data!${B_letter}${first_row}:${B_letter}${chart_last}"
 
-                # ── Area chart (primary / PSI axis) ──────────────────────────
-                # Draw order: P5 first (behind), P1 second (in front), LC Setpoint
-                # last so the amber line sits on top of the pressure bands.
-                # LC Setpoint uses fill=none so it renders as a line only.
+                # Single area chart — no combine() needed.
+                # Series draw order (first = furthest back, last = on top):
+                #   1. Efficiency A & B  → background, semi-transparent, y2 axis
+                #   2. P5 Pressure       → mid-layer
+                #   3. P1 Pressure       → mid-layer (in front of P5)
+                #   4. LC Setpoint       → top layer, line-only (fill=none)
                 chart = workbook.add_chart({"type": "area"})
 
+                # Efficiency bands — drawn first so they sit behind everything.
+                # High transparency (70 %) keeps them subtle; the border gives a
+                # visible edge without the solid-scribble look of opaque lines.
+                if "Efficiency A" in df.columns:
+                    col_ea = column_letter(df.columns.get_loc("Efficiency A"))
+                    chart.add_series({
+                        "name": "Forward Efficiency",
+                        "categories": time_cats(),
+                        "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
+                        "fill":   {"color": C_WHITE, "transparency": 70},
+                        "border": {"color": C_WHITE, "width": 1.0},
+                        "y2_axis": True,
+                    })
+                if "Efficiency B" in df.columns:
+                    col_eb = column_letter(df.columns.get_loc("Efficiency B"))
+                    chart.add_series({
+                        "name": "Reverse Efficiency",
+                        "categories": time_cats(),
+                        "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
+                        "fill":   {"color": C_RED, "transparency": 70},
+                        "border": {"color": C_RED, "width": 1.0},
+                        "y2_axis": True,
+                    })
+
+                # Pressure bands — drawn on top of efficiency.
                 if P5_letter:
                     chart.add_series({
                         "name": "P5 Pressure",
@@ -210,6 +237,9 @@ def process_csv_to_excel_from_file(file_path):
                         "fill":   {"color": C_P1, "transparency": 15},
                         "border": {"none": True},
                     })
+
+                # LC Setpoint — added last so it renders above everything else.
+                # fill=none means only the amber dashed border line is visible.
                 if H_lc_letter:
                     chart.add_series({
                         "name": "LC Setpoint",
@@ -219,34 +249,7 @@ def process_csv_to_excel_from_file(file_path):
                         "border": {"color": C_AMBER, "width": 1.75, "dash_type": "dash"},
                     })
 
-                # ── Line chart (secondary / Efficiency % axis) ────────────────
-                # Only set_y2_axis is called — on the PRIMARY chart AFTER combine.
-                # Calling set_y_axis on the secondary chart AND set_y2_axis on the
-                # primary produces duplicate axis XML and corrupts the file.
-                line_chart = workbook.add_chart({"type": "line"})
-
-                if "Efficiency A" in df.columns:
-                    col_ea = column_letter(df.columns.get_loc("Efficiency A"))
-                    line_chart.add_series({
-                        "name": "Forward Efficiency",
-                        "categories": time_cats(),
-                        "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
-                        "line":  {"color": C_WHITE, "width": 1.75},
-                        "y2_axis": True,
-                    })
-                if "Efficiency B" in df.columns:
-                    col_eb = column_letter(df.columns.get_loc("Efficiency B"))
-                    line_chart.add_series({
-                        "name": "Reverse Efficiency",
-                        "categories": time_cats(),
-                        "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
-                        "line":  {"color": C_RED, "width": 1.75},
-                        "y2_axis": True,
-                    })
-
-                chart.combine(line_chart)
-
-                # ── Styling (all after combine, all on the primary chart) ─────
+                # Axis and theme styling
                 chart.set_chartarea({"fill": {"color": C_CHARCOAL}, "border": {"none": True}})
                 chart.set_plotarea( {"fill": {"color": "#0D1421"},   "border": {"none": True}})
                 chart.set_title({
