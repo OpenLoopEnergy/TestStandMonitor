@@ -188,7 +188,10 @@ def process_csv_to_excel_from_file(file_path):
                 def time_cats():
                     return f"=Data!${B_letter}${first_row}:${B_letter}${chart_last}"
 
-                # Primary area chart — P5 behind P1 so P1 is always visible on top
+                # ── Area chart (primary / PSI axis) ──────────────────────────
+                # Draw order: P5 first (behind), P1 second (in front), LC Setpoint
+                # last so the amber line sits on top of the pressure bands.
+                # LC Setpoint uses fill=none so it renders as a line only.
                 chart = workbook.add_chart({"type": "area"})
 
                 if P5_letter:
@@ -207,10 +210,19 @@ def process_csv_to_excel_from_file(file_path):
                         "fill":   {"color": C_P1, "transparency": 15},
                         "border": {"none": True},
                     })
+                if H_lc_letter:
+                    chart.add_series({
+                        "name": "LC Setpoint",
+                        "categories": time_cats(),
+                        "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
+                        "fill":   {"none": True},
+                        "border": {"color": C_AMBER, "width": 1.75, "dash_type": "dash"},
+                    })
 
-                # Secondary line chart — efficiency (y2) and LC Setpoint (y1, drawn last = on top)
-                # Configuring the y2 axis on line_chart BEFORE combining is required for
-                # white axis labels to render correctly in combined charts.
+                # ── Line chart (secondary / Efficiency % axis) ────────────────
+                # Only set_y2_axis is called — on the PRIMARY chart AFTER combine.
+                # Calling set_y_axis on the secondary chart AND set_y2_axis on the
+                # primary produces duplicate axis XML and corrupts the file.
                 line_chart = workbook.add_chart({"type": "line"})
 
                 if "Efficiency A" in df.columns:
@@ -232,34 +244,11 @@ def process_csv_to_excel_from_file(file_path):
                         "y2_axis": True,
                     })
 
-                # LC Setpoint added LAST to line_chart so it renders on top of everything.
-                # y2_axis=False keeps it on the primary (PSI) scale.
-                if H_lc_letter:
-                    line_chart.add_series({
-                        "name": "LC Setpoint",
-                        "categories": time_cats(),
-                        "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
-                        "line":  {"color": C_AMBER, "width": 1.75, "dash_type": "dash"},
-                        "y2_axis": False,
-                    })
-
-                # Set y2 axis on line_chart BEFORE combining — this is required for
-                # the white font colour to apply correctly to the right-hand axis labels.
-                line_chart.set_y_axis({
-                    "name": "Efficiency %",
-                    "name_font": {"color": C_WHITE},
-                    "num_font":  {"color": C_WHITE},
-                    "min": 0, "max": 1.1, "major_unit": 0.1,
-                    "num_format": "0%",
-                    "major_gridlines": {"visible": False},
-                })
-
                 chart.combine(line_chart)
 
-                # Chart / plot area theming
+                # ── Styling (all after combine, all on the primary chart) ─────
                 chart.set_chartarea({"fill": {"color": C_CHARCOAL}, "border": {"none": True}})
                 chart.set_plotarea( {"fill": {"color": "#0D1421"},   "border": {"none": True}})
-
                 chart.set_title({
                     "name": "Open Loop Pump Test: Pressure & Efficiency",
                     "name_font": {"color": C_RED, "size": 16, "bold": True},
@@ -279,7 +268,6 @@ def process_csv_to_excel_from_file(file_path):
                     "min": 0, "max": 3500,
                     "major_gridlines": {"visible": True, "line": {"color": "#3D5166"}},
                 })
-                # Also call set_y2_axis on the primary chart for belt-and-suspenders
                 chart.set_y2_axis({
                     "name": "Efficiency %",
                     "name_font": {"color": C_WHITE},
@@ -293,9 +281,6 @@ def process_csv_to_excel_from_file(file_path):
                     "font": {"color": C_WHITE},
                 })
 
-                # xlsxwriter cannot mix insert_chart + insert_image on the same worksheet
-                # without corrupting drawing2.xml. Use a chartsheet instead — it fills
-                # the entire tab and has no drawing conflict.
                 chartsheet = workbook.add_chartsheet("Report Chart")
                 chartsheet.set_chart(chart)
 
