@@ -232,6 +232,7 @@ def process_csv_to_excel_from_file(file_path):
                         "values": f"=Data!${P5_letter}${first_row}:${P5_letter}${chart_last}",
                         "fill":   {"color": C_P5, "transparency": 15},
                         "border": {"none": True},
+                        "y2_axis": True,
                     })
                 if P1_letter:
                     fg.add_series({
@@ -240,6 +241,7 @@ def process_csv_to_excel_from_file(file_path):
                         "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${chart_last}",
                         "fill":   {"color": C_P1, "transparency": 15},
                         "border": {"none": True},
+                        "y2_axis": True,
                     })
                 if H_lc_letter:
                     fg.add_series({
@@ -248,6 +250,7 @@ def process_csv_to_excel_from_file(file_path):
                         "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
                         "fill":   {"none": True},
                         "border": {"color": C_AMBER, "width": 1.75, "dash_type": "dash"},
+                        "y2_axis": True,
                     })
 
                 has_efficiency = "Efficiency A" in df.columns or "Efficiency B" in df.columns
