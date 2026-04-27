@@ -88,8 +88,8 @@ def export_data(db: Session = Depends(get_db)):
             raw_f1 = r.f1 if r.f1 is not None else 0.0
             scaled_f1 = raw_f1 * 0.01
             writer.writerow([
-                r.logged_at.strftime("%Y-%m-%d"),
-                r.logged_at.strftime("%H:%M:%S"),
+                r.logged_at.astimezone(now.tzinfo).strftime("%Y-%m-%d"),
+                r.logged_at.astimezone(now.tzinfo).strftime("%H:%M:%S"),
                 r.s1, r.sp, r.tp,
                 r.cycle, r.cycle_timer,
                 r.lc_setpoint, r.lc_regulate,
