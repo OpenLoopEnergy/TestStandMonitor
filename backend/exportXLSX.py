@@ -9,18 +9,14 @@ _ASSETS_LOGO   = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
 _FALLBACK_LOGO = os.path.join(os.path.dirname(__file__), "..", "frontend", "teststandfrontend", "public", "logo.png")
 LOGO_PATH = _ASSETS_LOGO if os.path.isfile(_ASSETS_LOGO) else _FALLBACK_LOGO
 
-# Brand palette
-C_RED      = '#EB1C23'
-C_BLACK    = '#000000'
-C_WHITE    = '#FFFFFF'
-C_CHARCOAL = '#2E3E4D'
-C_AMBER    = '#ECA400'   # accent — sparingly
-
-# Pressure band colours — clearly distinct from each other and from the dark plot background
-C_P1 = '#4472C4'   # office blue
-C_P5 = '#1B6B8A'   # teal — distinct from both P1 blue and the charcoal chart background
-
-# rounding up a few stray colors from recent updates, and relocating them here
+# ── Brand Palette & Semantic Styles ──────────────────────────────────────────
+C_RED         = '#EB1C23'   # Open Loop Red
+C_BLACK       = '#000000'
+C_WHITE       = '#FFFFFF'
+C_CHARCOAL    = '#2E3E4D'
+C_AMBER       = '#ECA400'   # LC Setpoint Target
+C_P1          = '#4472C4'   # Office Blue
+C_P5          = '#1B6B8A'   # Teal
 C_BORDER_DARK = '#1A2733'   # Header borders
 C_ROW_EVEN    = '#EBF0F5'   # Alternating row color
 C_GRIDLINE    = '#3D5166'   # Grid lines in the dark chart
@@ -57,9 +53,8 @@ def process_csv_to_excel_from_file(file_path):
                 data_lines.append(row)
 
         if not header_row_found:
-            raise ValueError("Failed to find the data header row (needs at least Time and S1).")
+            raise ValueError("Failed to find the data header row.")
 
-        # Ensure core columns are numeric
         df = pd.read_csv(io.StringIO("\n".join([",".join(map(str, row)) for row in data_lines])))
 
         for col in ["TP", "S1", "F1", "LCSetpoint", "P1", "P5", "TP Reversed", "Trending"]:
@@ -73,7 +68,6 @@ def process_csv_to_excel_from_file(file_path):
                 idx = idx // 26 - 1
             return letter
 
-        # Column mapping — optional columns get None if absent
         S1_letter      = column_letter(df.columns.get_loc("S1"))
         F1_letter      = column_letter(df.columns.get_loc("F1"))
         B_letter       = column_letter(df.columns.get_loc("Time"))
@@ -84,9 +78,9 @@ def process_csv_to_excel_from_file(file_path):
         P5_letter      = column_letter(df.columns.get_loc("P5"))          if "P5"          in df.columns else None
 
         input_factor_row = metadata_row_indices.get("Input Factor", 5)
-        offset = len(metadata) + 1   # 0-based row index of the column-header row
+        offset = len(metadata) + 1
 
-        # --- Efficiency Logic (Filtered by Trending) ---
+        # --- Efficiency Logic ---
         def efficiency_formula(row):
             rn = row.name + offset + 2
             theo = f"($B${input_factor_row}*{S1_letter}{rn}/231)"
@@ -96,12 +90,12 @@ def process_csv_to_excel_from_file(file_path):
         W_raw_eff = column_letter(df.columns.get_loc("EfficiencyRaw"))
 
         if U_letter and T_trend_letter:
-            def eff_a_formula(row): # Forward
+            def eff_a_formula(row):
                 rn = row.name + offset + 2
                 prev_rn = rn - 1 if row.name > 0 else rn
                 return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=1,${U_letter}{prev_rn}=1)),${W_raw_eff}{rn},NA())'
 
-            def eff_b_formula(row):  # Reverse
+            def eff_b_formula(row):
                 rn = row.name + offset + 2
                 prev_rn = rn - 1 if row.name > 0 else rn
                 return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=0,${U_letter}{prev_rn}=0)),${W_raw_eff}{rn},NA())'
@@ -109,12 +103,9 @@ def process_csv_to_excel_from_file(file_path):
             df["Efficiency A"] = df.apply(eff_a_formula, axis=1)
             df["Efficiency B"] = df.apply(eff_b_formula, axis=1)
 
-        # --- Excel output ---
         timestamp = get_export_now().strftime("%m-%d-%Y_%I-%M-%S_%p")
         excel_file = os.path.join(os.path.dirname(file_path), f"TestResults_{timestamp}.xlsx")
         has_logo   = os.path.isfile(LOGO_PATH)
-
-        # Formula columns — use header length for width (formula strings are huge)
         FORMULA_COLS = {"EfficiencyRaw", "Efficiency A", "Efficiency B"}
 
         with pd.ExcelWriter(excel_file, engine="xlsxwriter") as writer:
@@ -123,57 +114,47 @@ def process_csv_to_excel_from_file(file_path):
             workbook, worksheet = writer.book, writer.sheets["Data"]
 
             # ── Formats ─────────────────────────────────────────────────────
-            percent_fmt  = workbook.add_format({"num_format": "0.00%"})
+            percent_fmt  = workbook.add_format({"num_format": "0.0%"})
             header_fmt   = workbook.add_format({
-                "bold": True, "font_color": C_WHITE, "bg_color": C_CHARCOAL,
+                "bold": True, "font_color": C_WHITE,
+                "bg_color": C_CHARCOAL,
                 "border": 1, "border_color": C_BORDER_DARK,
             })
             meta_key_fmt = workbook.add_format({"bold": True, "font_color": C_RED})
-            even_fmt     = workbook.add_format({"bg_color": C_ROW_EVEN})   # light blue-grey
+            even_fmt     = workbook.add_format({"bg_color": C_ROW_EVEN})
             odd_fmt      = workbook.add_format({"bg_color": C_WHITE})
 
-            # ── Column-header row ────────────────────────────────────────────
             for col_idx, col_name in enumerate(df.columns):
                 worksheet.write(offset, col_idx, col_name, header_fmt)
 
-            # ── Metadata key labels ─────────────────────────────────────────
             for row_idx, row_data in enumerate(metadata):
                 if row_data:
                     worksheet.write(row_idx, 0, row_data[0], meta_key_fmt)
 
-            # ── Auto-fit column widths ──────────────────────────────────────
+            # ── RESTORED: Deep Auto-fit Logic ───────────────────────────────
             df_str = df.astype(str)
             for col_idx, col_name in enumerate(df.columns):
                 if col_name in FORMULA_COLS:
-                    # Formula cells display short numbers — size by header name only
                     col_width = len(col_name) + 2
                 else:
                     max_data_len = df_str[col_name].map(len).max() if len(df) > 0 else 0
                     col_width = max(len(col_name), max_data_len) + 2
-                    # Also check metadata values in columns 0 and 1
                     if col_idx == 0:
                         col_width = max(col_width, max((len(str(r[0])) for r in metadata if r), default=0) + 2)
                     elif col_idx == 1:
                         col_width = max(col_width, max((len(str(r[1])) for r in metadata if len(r) > 1), default=0) + 2)
-                # Cap very wide columns (long step names etc.)
                 col_width = min(col_width, 40)
                 worksheet.set_column(col_idx, col_idx, col_width)
 
-            # Re-apply percent format to efficiency columns after set_column
-            if "Efficiency A" in df.columns and "Efficiency B" in df.columns:
-                worksheet.set_column(df.columns.get_loc("Efficiency A"),
-                                     df.columns.get_loc("Efficiency B"), 14, percent_fmt)
+            if "Efficiency A" in df.columns:
+                worksheet.set_column(df.columns.get_loc("Efficiency A"), df.columns.get_loc("Efficiency B"), 14, percent_fmt)
 
-            # ── Alternating row colours ─────────────────────────────────────
             last_row, data_start = len(df) + offset + 1, offset + 1
-            worksheet.conditional_format(data_start, 0, last_row, len(df.columns)-1, 
-                                         {"type": "formula", "criteria": "=MOD(ROW(),2)=0", "format": even_fmt})
-            worksheet.conditional_format(data_start, 0, last_row, len(df.columns)-1, 
-                                         {"type": "formula", "criteria": "=MOD(ROW(),2)=1", "format": odd_fmt})
-
+            worksheet.conditional_format(data_start, 0, last_row, len(df.columns)-1, {"type": "formula", "criteria": "=MOD(ROW(),2)=0", "format": even_fmt})
+            worksheet.conditional_format(data_start, 0, last_row, len(df.columns)-1, {"type": "formula", "criteria": "=MOD(ROW(),2)=1", "format": odd_fmt})
             worksheet.autofilter(offset, 0, last_row, len(df.columns)-1)
 
-            # ── Logo on Data sheet — full native size (546×324 px) ──────────
+            # ── RESTORED: Logo Control ──────────────────────────────────────
             if has_logo:
                 worksheet.insert_image(0, 9, LOGO_PATH, {
                     "x_scale": 1.0,
@@ -181,85 +162,70 @@ def process_csv_to_excel_from_file(file_path):
                     "object_position": 3,
                 })
 
-            # ── Chart ────────────────────────────────────────────────────────
+            # ── Combined Chart Logic ────────────────────────────────────────
             if len(df) > 0:
                 first_row, chart_last = offset + 2, len(df) + offset + 1
-                has_efficiency = "Efficiency A" in df.columns or "Efficiency B" in df.columns
                 def time_cats(): return f"=Data!${B_letter}${first_row}:${B_letter}${chart_last}"
 
-                # Layer order fix — Excel always draws secondary-axis series on top
-                # of primary-axis series, regardless of insertion order.  The only
-                # reliable solution is to make efficiency the PRIMARY chart (drawn
-                # first = background) and combine pressure+LC as the SECONDARY chart
-                # (drawn on top = foreground).
-                #
-                # Side-effect: Efficiency % axis moves to the LEFT, PSI to the RIGHT.
-                # That is acceptable and the only way to guarantee correct layering.
-
-                # PRIMARY chart — efficiency bands (background)
+                # 1. Base Chart (Efficiency Areas on Left Axis)
                 chart = workbook.add_chart({"type": "area"})
+                has_efficiency = "Efficiency A" in df.columns
                 if has_efficiency:
                     col_ea = column_letter(df.columns.get_loc("Efficiency A"))
                     col_eb = column_letter(df.columns.get_loc("Efficiency B"))
                     chart.add_series({
                         "name": "Fwd Efficiency", "categories": time_cats(),
                         "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
-                        "fill": {"color": C_WHITE, "transparency": 70},
-                        "border": {"color": C_WHITE, "width": 1.0},
+                        "fill": {"color": C_WHITE, "transparency": 70}, "border": {"color": C_WHITE, "width": 1.0},
                     })
                     chart.add_series({
                         "name": "Rev Efficiency", "categories": time_cats(),
                         "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
-                        "fill": {"color": C_RED, "transparency": 70},
-                        "border": {"color": C_RED, "width": 1.0},
+                        "fill": {"color": C_RED, "transparency": 70}, "border": {"color": C_RED, "width": 1.0},
                     })
 
-                # SECONDARY chart — pressure bands + LC Setpoint (foreground).
-                # Combined secondary series automatically use the y2 axis (PSI, right).
-                # LC Setpoint is added last within the secondary chart so it sits on
-                # top of the pressure bands.
+                # 2. Combined Chart (Pressure Area + LC Line on Right Axis)
+                # We use a Line chart here to host the LC line and Pressure 'Areas'
                 fg = workbook.add_chart({"type": "area"})
                 if P5_letter:
-                    fg.add_series({"name": "P5", "values": f"=Data!${P5_letter}${first_row}:${P5_letter}${chart_last}",
+                    fg.add_series({"name": "P5 PSI", "values": f"=Data!${P5_letter}${first_row}:${P5_letter}${chart_last}",
                                    "fill": {"color": C_P5, "transparency": 15}, "y2_axis": True})
                 if P1_letter:
-                    fg.add_series({"name": "P1", "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${chart_last}",
+                    fg.add_series({"name": "P1 PSI", "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${chart_last}",
                                    "fill": {"color": C_P1, "transparency": 15}, "y2_axis": True})
+                
+                # 3. Dedicated Line Chart for LC Setpoint to force it to be a Line
+                lc_line = workbook.add_chart({"type": "line"})
                 if H_lc_letter:
-                    fg.add_series({"name": "LC Setpoint", "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
-                                   "line": {"color": C_AMBER, "width": 1.75, "dash_type": "dash"}, "y2_axis": True})
+                    lc_line.add_series({
+                        "name": "LC Setpoint", 
+                        "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
+                        "line": {"color": C_AMBER, "width": 2, "dash_type": "dash"}, 
+                        "y2_axis": True
+                    })
 
                 if has_efficiency:
                     chart.combine(fg)
+                    chart.combine(lc_line)
                 else:
                     chart = fg
+                    chart.combine(lc_line)
 
-                # High Contrast Dark Theme & Axis Fixes
-                chart.set_chartarea({"fill": {"color": C_BLACK}})
-                chart.set_plotarea( {"fill": {"color": C_PLOT_BG}})
-                chart.set_title({
-                    "name": "Open Loop Pump Test: Pressure & Efficiency",
-                    "name_font": {"color": C_RED, "size": 16, "bold": True},
-                })
+                # Theme and Axis Styling applied to the Primary object
+                chart.set_chartarea({"fill": {"color": C_CHARCOAL}, "border": {"none": True}})
+                chart.set_plotarea( {"fill": {"color": C_PLOT_BG},   "border": {"none": True}})
+                chart.set_title({"name": "Open Loop Pump Test Profile", "name_font": {"color": C_RED, "size": 16, "bold": True}})
+                chart.set_x_axis({"name": "Time", "name_font": {"color": C_WHITE}, "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE}})
                 
-                chart.set_x_axis({
-                    "name": "Time", 
-                    "name_font": {"color": C_WHITE}, 
-                    "num_font": {"color": C_WHITE},
-                    "line": {"color": C_WHITE}
-                })
-
-                # LEFT Axis: Efficiency %
+                # Left Axis (Efficiency)
                 chart.set_y_axis({
                     "name": "Efficiency %" if has_efficiency else "PSI",
                     "name_font": {"color": C_WHITE}, "num_font": {"color": C_WHITE},
                     "min": 0, "max": 1.1 if has_efficiency else 3500,
-                    "num_format": "0%" if has_efficiency else "0",
-                    "major_gridlines": {"visible": False if has_efficiency else True},
-                    "line": {"color": C_WHITE}
+                    "num_format": "0%", "major_gridlines": {"visible": False},
                 })
 
-                # RIGHT Axis: PSI
+                # Right Axis (PSI) - Configured on primary chart object to ensure white text/labels
                 if has_efficiency:
                     chart.set_y2_axis({
                         "name": "PSI",
@@ -267,7 +233,6 @@ def process_csv_to_excel_from_file(file_path):
                         "num_font":  {"color": C_WHITE},
                         "min": 0, "max": 3500,
                         "major_gridlines": {"visible": True, "line": {"color": C_GRIDLINE}},
-                        "line": {"color": C_WHITE}
                     })
 
                 chart.set_legend({"position": "bottom", "font": {"color": C_WHITE}})
