@@ -220,14 +220,24 @@ def process_csv_to_excel_from_file(file_path):
                 # top of the pressure bands.
                 fg = workbook.add_chart({"type": "area"})
                 if P5_letter:
-                    fg.add_series({"name": "P5", "values": f"=Data!${P5_letter}${first_row}:${P5_letter}${chart_last}",
-                                   "fill": {"color": C_P5, "transparency": 15}, "y2_axis": True})
+                    fg.add_series({
+                        "name": "P5 Pressure", "categories": time_cats(),
+                        "values": f"=Data!${P5_letter}${first_row}:${P5_letter}${chart_last}",
+                        "fill": {"color": C_P5, "transparency": 15}, "border": {"none": True}, "y2_axis": True,
+                    })
                 if P1_letter:
-                    fg.add_series({"name": "P1", "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${chart_last}",
-                                   "fill": {"color": C_P1, "transparency": 15}, "y2_axis": True})
+                    fg.add_series({
+                        "name": "P1 Pressure", "categories": time_cats(),
+                        "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${chart_last}",
+                        "fill": {"color": C_P1, "transparency": 15}, "border": {"none": True}, "y2_axis": True,
+                    })
                 if H_lc_letter:
-                    fg.add_series({"name": "LC Setpoint", "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
-                                   "line": {"color": C_AMBER, "width": 1.75, "dash_type": "dash"}, "y2_axis": True})
+                    fg.add_series({
+                        "name": "LC Setpoint", "categories": time_cats(),
+                        "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
+                        "fill": {"none": True}, "border": {"color": C_AMBER, "width": 1.75, "dash_type": "dash"},
+                        "y2_axis": True,
+                    })
 
                 if has_efficiency:
                     chart.combine(fg)
