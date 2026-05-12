@@ -51,7 +51,7 @@ export function DataTable({ rows, inputFactor }: Props) {
                 <td className="px-2 py-1.5 whitespace-nowrap">{row.Step ?? '—'}</td>
                 <td className="px-2 py-1.5">{scale(row.F1, 0.01)}</td>
                 <td className="px-2 py-1.5">{scale(row.F2, 0.01)}</td>
-                <td className="px-2 py-1.5">{scale(row.F3, 0.01)}</td>
+                <td className="px-2 py-1.5">{scale(row.F3, 0.001)}</td>
                 <td className="px-2 py-1.5">{scale(row.T1, 0.1)}</td>
                 <td className="px-2 py-1.5">{scale(row.T3, 0.1)}</td>
                 <td className="px-2 py-1.5">{row.P1 ?? '—'}</td>
