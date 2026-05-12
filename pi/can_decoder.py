@@ -318,19 +318,24 @@ def decoded_to_live_frame(decoded: dict) -> dict | None:
             "step":       decoded["signalBubbleStr"],
         }
     if mid == 0x0CFF050A:
-        return {"f3": decoded["signal_Scaled_F3"]}
+        return None
     if mid == 0x0CFF0C0A:
         return {
             "p2": decoded["signal_Scaled_P2"],
             "p4": decoded["signal_Scaled_P4"],
-            "f1": decoded["signal_Scaled_F1"],
         }
     if mid == 0x0CFF0D14:
-        return {"p3": decoded["SignalP3"]}
+        return {
+            "f1": decoded["SignalF1"],
+            "p3": decoded["SignalP3"],
+        }
     if mid == 0x0CFF060A:
         return {"ee_dir_switch": decoded["signalEE_EEDirSwitch"]}
     if mid == 0x0CFF0E14:
-        return {"m2_tp9a_dir": decoded["signalM2_TP9A_Dir"]}
+        return {
+            "f3": decoded["signalM2_F3"],
+            "m2_tp9a_dir": decoded["signalM2_TP9A_Dir"],
+        }
 
     return None  # Message doesn't contribute to the live display
 

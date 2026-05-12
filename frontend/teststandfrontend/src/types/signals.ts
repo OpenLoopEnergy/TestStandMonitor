@@ -18,7 +18,7 @@ export interface LiveData {
   t1: number
   t3: number
 
-  // Flows (raw — F1 is centi-units, divide by 100; F2/F3 also × 0.01 on display)
+  // Flows (raw — F1/F2 use × 0.01 on display; F3 uses × 0.001)
   f1: number
   f2: number
   f3: number

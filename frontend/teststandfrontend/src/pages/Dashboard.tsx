@@ -16,7 +16,7 @@ function getLiveValue(signal: ChartSignal, d: LiveData): number | null {
     case 'TP': return d.tp / 10.23
     case 'F1': return d.f1 * 0.01
     case 'F2': return d.f2 * 0.01
-    case 'F3': return d.f3 * 0.01
+    case 'F3': return d.f3 * 0.001
     case 'T1': return d.t1 * 0.1
     case 'T3': return d.t3 * 0.1
     case 'P1': return d.p1
@@ -351,7 +351,7 @@ export default function Dashboard() {
                 ['T3',         `${(data.t3 * 0.1).toFixed(1)} °F`],
                 ['F1',         `${f1.toFixed(2)} GPM`],
                 ['F2',         `${(data.f2 * 0.01).toFixed(2)} GPM`],
-                ['F3',         `${(data.f3 * 0.01).toFixed(2)} GPM`],
+                ['F3',         `${(data.f3 * 0.001).toFixed(3)} GPM`],
                 ['P1',         `${data.p1} PSI`],
                 ['P2',         `${data.p2} PSI`],
                 ['P3',         `${data.p3} PSI`],
