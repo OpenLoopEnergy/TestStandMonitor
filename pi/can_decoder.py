@@ -1,9 +1,6 @@
 """
 CAN frame decoder — preserved logic from the original decodeAndProcess.py.
 
-decode_message(message) accepts:
-  {"arbitration": int, "data": list[int], "timestamp": float}
-Returns:
   (message_id, decoded_dict)  — decoded_dict is ready to send as a JSON frame
   (None, None)                — unknown or outbound message ID (skip)
   (0, 0)                      — outbound command IDs (skip silently)
