@@ -96,7 +96,7 @@ def export_data(db: Session = Depends(get_db)):
                 r.cycle, r.cycle_timer,
                 r.lc_setpoint, r.lc_regulate,
                 r.step,
-                f"{scaled_f1:.2f}", r.f3, f"{scaled_f3:.2f}",
+                f"{scaled_f1:.2f}", r.f2, f"{scaled_f3:.2f}",
                 r.t1, r.t3,
                 r.p1, r.p2, r.p3, r.p4, r.p5,
                 1 if r.tp_reversed else 0,
