@@ -24,7 +24,7 @@ export function DataTable({ rows, inputFactor }: Props) {
         <thead>
           <tr className="bg-white/10 text-gray-400 uppercase tracking-wide">
             {['Date','Time','S1','SP','TP%','Cycle','Cyc Timer','LC Set','LC Reg','Step',
-              'F1','F2','F3','T1','T3','P1','P2','P3','P4','P5','Theo Flow','Eff%'].map(h => (
+              'F1','F2','F3','T1','T3','P1','P2','P3','P4','P5','Theo Flow','Eff% A','Eff% B'].map(h => (
               <th key={h} className="px-2 py-2 whitespace-nowrap border-b border-white/10">{h}</th>
             ))}
           </tr>
@@ -35,7 +35,8 @@ export function DataTable({ rows, inputFactor }: Props) {
             const f1Raw = row.F1 ?? 0
             const f1 = f1Raw * 0.01
             const theoFlow = inputFactor > 0 ? (s1 * inputFactor) / 231 : 0
-            const eff = theoFlow > 0 ? (f1 / theoFlow) * 100 : 0
+            const effa = theoFlow > 0 ? (f1 / theoFlow) * 100 : 0
+            const effb = theoFlow > 0 ? (f3 / theoFlow) * 100 : 0
 
             return (
               <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
@@ -60,7 +61,8 @@ export function DataTable({ rows, inputFactor }: Props) {
                 <td className="px-2 py-1.5">{row.P4 ?? '—'}</td>
                 <td className="px-2 py-1.5">{row.P5 ?? '—'}</td>
                 <td className="px-2 py-1.5">{theoFlow.toFixed(2)}</td>
-                <td className="px-2 py-1.5">{eff.toFixed(2)}</td>
+                <td className="px-2 py-1.5">{effa.toFixed(2)}</td>
+                <td className="px-2 py-1.5">{effb.toFixed(2)}</td>
               </tr>
             )
           })}
