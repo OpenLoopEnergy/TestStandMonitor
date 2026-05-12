@@ -34,6 +34,8 @@ export function DataTable({ rows, inputFactor }: Props) {
             const s1 = row.S1 ?? 0
             const f1Raw = row.F1 ?? 0
             const f1 = f1Raw * 0.01
+            const f3Raw = row.F3 ?? 0
+            const f3 = f3Raw * 0.01
             const theoFlow = inputFactor > 0 ? (s1 * inputFactor) / 231 : 0
             const effa = theoFlow > 0 ? (f1 / theoFlow) * 100 : 0
             const effb = theoFlow > 0 ? (f3 / theoFlow) * 100 : 0
