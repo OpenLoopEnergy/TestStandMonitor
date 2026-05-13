@@ -93,7 +93,7 @@ def process_csv_to_excel_from_file(file_path):
                 if "cu/cm" in str(r[1]).strip().lower(): is_cu_in = False
                 break
 
-        # 1. Restore Theo Flow Column (Standard Engineering Calculation)
+        # 1. Theoretical Flow (Calculation Reference)
         def calculate_theo_flow(row):
             rn = row.name + offset + 2
             if is_cu_in:
@@ -103,7 +103,7 @@ def process_csv_to_excel_from_file(file_path):
         df["Theo Flow"] = df.apply(calculate_theo_flow, axis=1)
         FTheo_L = column_letter(df.columns.get_loc("Theo Flow"))
 
-        # 2. Map Dual Sensors to Efficiency columns
+        # 2. Raw Efficiencies
         def raw_eff_f1(row):
             rn = row.name + offset + 2
             expr = f"{F1_letter}{rn}/{FTheo_L}{rn}"
@@ -119,14 +119,14 @@ def process_csv_to_excel_from_file(file_path):
         W1_L = column_letter(df.columns.get_loc("EffRaw_F1"))
         W3_L = column_letter(df.columns.get_loc("EffRaw_F3"))
 
-        # 3. Filtered Efficiency A (Sensor 1) and B (Sensor 3)
+        # 3. Efficiency A (Fwd/F1) and B (Rev/F3)
         if U_letter and T_trend_letter:
             def eff_a_formula(row):
                 rn = row.name + offset + 2
                 prev = rn - 1 if row.name > 0 else rn
                 return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=1,${U_letter}{prev}=1)),${W1_L}{rn},NA())'
 
-            def eff_b_formula(row):  # Reverse
+            def eff_b_formula(row):
                 rn = row.name + offset + 2
                 prev = rn - 1 if row.name > 0 else rn
                 return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=0,${U_letter}{prev}=0)),${W3_L}{rn},NA())'
@@ -134,7 +134,7 @@ def process_csv_to_excel_from_file(file_path):
             df["Efficiency A"] = df.apply(eff_a_formula, axis=1)
             df["Efficiency B"] = df.apply(eff_b_formula, axis=1)
 
-        # --- Excel output ---
+        # --- Excel Export ---
         timestamp = get_export_now().strftime("%m-%d-%Y_%I-%M-%S_%p")
         excel_file = os.path.join(os.path.dirname(file_path), f"TestResults_{timestamp}.xlsx")
         FORMULA_COLS = {"Theo Flow", "EffRaw_F1", "EffRaw_F3", "Efficiency A", "Efficiency B"}
@@ -145,11 +145,11 @@ def process_csv_to_excel_from_file(file_path):
             workbook, worksheet = writer.book, writer.sheets["Data"]
 
             # ── Formats ─────────────────────────────────────────────────────
-            percent_fmt  = workbook.add_format({"num_format": "0.00%"})
-            header_fmt   = workbook.add_format({"bold": True, "font_color": C_WHITE, "bg_color": C_CHARCOAL, "border": 1, "border_color": C_BORDER_DARK})
+            percent_fmt = workbook.add_format({"num_format": "0.00%"})
+            header_fmt  = workbook.add_format({"bold": True, "font_color": C_WHITE, "bg_color": C_CHARCOAL, "border": 1, "border_color": C_BORDER_DARK})
             meta_key_fmt = workbook.add_format({"bold": True, "font_color": C_RED})
-            even_fmt     = workbook.add_format({"bg_color": C_ROW_EVEN})   # light blue-grey
-            odd_fmt      = workbook.add_format({"bg_color": C_WHITE})
+            even_fmt    = workbook.add_format({"bg_color": C_ROW_EVEN})
+            odd_fmt     = workbook.add_format({"bg_color": C_WHITE})
 
             # Headers and Metadata labels
             for col_idx, col_name in enumerate(df.columns):
@@ -167,10 +167,11 @@ def process_csv_to_excel_from_file(file_path):
                 if col_idx == 0: col_width = max(col_width, max((len(str(r[0])) for r in metadata if r), default=0) + 2)
                 worksheet.set_column(col_idx, col_idx, min(col_width, 40))
 
-            # Re-apply percent formatting
+            # Apply percent formatting
             for col in ["EffRaw_F1", "EffRaw_F3", "Efficiency A", "Efficiency B"]:
                 if col in df.columns:
-                    worksheet.set_column(df.columns.get_loc(col), df.columns.get_loc(col), 14, percent_fmt)
+                    idx = df.columns.get_loc(col)
+                    worksheet.set_column(idx, idx, 14, percent_fmt)
 
             # ── Alternating row colours ─────────────────────────────────────
             last_row, data_start = len(df) + offset + 1, offset + 1
@@ -181,75 +182,87 @@ def process_csv_to_excel_from_file(file_path):
             if os.path.isfile(LOGO_PATH):
                 worksheet.insert_image(0, 9, LOGO_PATH, {"x_scale": 1.0, "y_scale": 1.0, "object_position": 3})
 
-            # --- Chart Logic ──────────────────────────────────────────────────
+            # ── Chart Logic ──────────────────────────────────────────────────
             if len(df) > 0:
                 first_row, chart_last = offset + 2, len(df) + offset + 1
                 def time_cats(): return f"=Data!${B_letter}${first_row}:${B_letter}${chart_last}"
 
-                # 1. PRIMARY Chart (Pressure Areas on Left Axis)
-                # Setting Pressure as primary ensures it stays in the background
+                # 1. PRIMARY Chart (Pressure Areas & LC Line on Left Axis)
                 chart = workbook.add_chart({"type": "area"})
-                if P5_letter:
-                    chart.add_series({
-                        "name": "P5 Pressure", "categories": time_cats(),
-                        "values": f"=Data!${P5_letter}${first_row}:${P5_letter}${chart_last}",
-                        "fill": {"color": C_PRESS_P5, "transparency": 20}, "border": {"none": True},
+                
+                # P5 Background
+                chart.add_series({
+                    "name": "P5 Pressure", "categories": time_cats(),
+                    "values": f"=Data!${P5_letter}${first_row}:${P5_letter}${chart_last}",
+                    "fill": {"color": C_PRESS_P5, "transparency": 20}, "border": {"none": True},
+                })
+                # P1 Background
+                chart.add_series({
+                    "name": "P1 Pressure", "categories": time_cats(),
+                    "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${chart_last}",
+                    "fill": {"color": C_PRESS_P1, "transparency": 20}, "border": {"none": True},
+                })
+                
+                # LC Setpoint (Combined as a Line on the Left Axis)
+                lc_line = workbook.add_chart({"type": "line"})
+                if H_lc_letter:
+                    lc_line.add_series({
+                        "name": "LC Setpoint", "categories": time_cats(),
+                        "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
+                        "line": {"color": C_AMBER, "width": 2, "dash_type": "dash"},
                     })
-                if P1_letter:
-                    chart.add_series({
-                        "name": "P1 Pressure", "categories": time_cats(),
-                        "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${chart_last}",
-                        "fill": {"color": C_PRESS_P1, "transparency": 20}, "border": {"none": True},
-                    })
+                chart.combine(lc_line)
 
-                # 2. SECONDARY Chart (Efficiency & LC as Lines on Right Axis)
-                # Using 'line' type prevents LC Setpoint from being an area
-                fg = workbook.add_chart({"type": "line"})
+                # 2. SECONDARY Chart (Efficiency as Columns on Right Axis)
+                # This fixes the scaling and the "connecting across gaps" issue
+                eff_col_chart = workbook.add_chart({"type": "column"})
                 
                 # Efficiency A (F1)
                 col_ea = column_letter(df.columns.get_loc("Efficiency A"))
-                fg.add_series({
+                eff_col_chart.add_series({
                     "name": "Fwd Efficiency (F1)",
                     "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
-                    "line": {"color": C_EFF_FWD, "width": 2.25},
+                    "fill": {"color": C_EFF_FWD},
                     "y2_axis": True,
                 })
                 # Efficiency B (F3)
                 col_eb = column_letter(df.columns.get_loc("Efficiency B"))
-                fg.add_series({
+                eff_col_chart.add_series({
                     "name": "Rev Efficiency (F3)",
                     "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
-                    "line": {"color": C_EFF_REV, "width": 2.25},
+                    "fill": {"color": C_EFF_REV},
                     "y2_axis": True,
                 })
-                # LC Setpoint (Target Line)
-                if H_lc_letter:
-                    fg.add_series({
-                        "name": "LC Setpoint",
-                        "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
-                        "line": {"color": C_AMBER, "width": 1.5, "dash_type": "dash"},
-                        "y2_axis": True,
-                    })
+                chart.combine(eff_col_chart)
 
-                chart.combine(fg)
-
-                # Theme and Axis Styling
-                chart.set_chartarea({"fill": {"color": C_BLACK}})
-                chart.set_plotarea( {"fill": {"color": C_PLOT_BG}})
+                # 3. DARK THEME & AXIS STYLING (Applied to the main object)
+                chart.set_chartarea({"fill": {"color": C_BLACK}, "border": {"none": True}})
+                chart.set_plotarea( {"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
                 chart.set_title({"name": "Open Loop Pump Test Profile", "name_font": {"color": C_RED, "size": 16, "bold": True}})
-                chart.set_x_axis({"name": "Time Index", "name_font": {"color": C_WHITE}, "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE}})
                 
-                # Primary Y-Axis (Left - PSI)
+                # Bottom Axis
+                chart.set_x_axis({
+                    "name": "Time Index", 
+                    "name_font": {"color": C_WHITE}, "num_font": {"color": C_WHITE}, 
+                    "line": {"color": C_WHITE}
+                })
+                
+                # LEFT Axis (PSI)
                 chart.set_y_axis({
-                    "name": "PSI", "name_font": {"color": C_WHITE}, "num_font": {"color": C_WHITE},
-                    "min": 0, "max": 3500, "major_gridlines": {"visible": True, "line": {"color": C_GRIDLINE}},
+                    "name": "Pressure (PSI)", 
+                    "name_font": {"color": C_WHITE}, "num_font": {"color": C_WHITE},
+                    "min": 0, "max": 3500, 
+                    "major_gridlines": {"visible": True, "line": {"color": C_GRIDLINE}},
                     "line": {"color": C_WHITE}
                 })
 
-                # Secondary Y-Axis (Right - Efficiency %)
+                # RIGHT Axis (Efficiency %)
+                # Explicitly setting the y2 axis properties on the main chart forces the white labels
                 chart.set_y2_axis({
-                    "name": "Efficiency %", "name_font": {"color": C_WHITE}, "num_font":  {"color": C_WHITE},
-                    "min": 0, "max": 1.1, "num_format": "0%", "line": {"color": C_WHITE}
+                    "name": "Efficiency %", 
+                    "name_font": {"color": C_WHITE}, "num_font":  {"color": C_WHITE},
+                    "min": 0, "max": 1.1, "major_unit": 0.2, 
+                    "num_format": "0%", "line": {"color": C_WHITE}
                 })
 
                 chart.set_legend({"position": "bottom", "font": {"color": C_WHITE}})
