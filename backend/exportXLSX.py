@@ -13,14 +13,13 @@ LOGO_PATH = _ASSETS_LOGO if os.path.isfile(_ASSETS_LOGO) else _FALLBACK_LOGO
 C_RED         = '#EB1C23'   # Open Loop Red
 C_BLACK       = '#000000'
 C_WHITE       = '#FFFFFF'
-C_WHITE_Y2    = '#FEFEFE'
 C_CHARCOAL    = '#2E3E4D'
 C_AMBER       = '#ECA400'   # LC Setpoint Target
 
 C_PRESS_P1    = '#4472C4'   # Office Blue
-C_PRESS_P5    = '#00BCD4'   # Bright Cyan-Teal (clearly distinct from P1 blue)
-C_EFF_FWD     = '#C0C0C0'   # Silver Gray (Forward - Sensor 1)
-C_EFF_REV     = '#EB1C23'   # Logo Red (Reverse - Sensor 3)
+C_PRESS_P5    = '#00BCD4'   # Bright Cyan-Teal
+C_EFF_FWD     = '#C0C0C0'   # Silver Gray (Sensor 1)
+C_EFF_REV     = '#EB1C23'   # Red (Sensor 3)
 
 C_BORDER_DARK = '#1A2733'   # Header borders
 C_ROW_EVEN    = '#EBF0F5'   # Alternating row color
@@ -94,7 +93,7 @@ def process_csv_to_excel_from_file(file_path):
                 if "cu/cm" in str(r[1]).strip().lower(): is_cu_in = False
                 break
 
-        # 1. Theoretical Flow (Calculation Reference)
+        # 1. Theoretical Flow
         def calculate_theo_flow(row):
             rn = row.name + offset + 2
             if is_cu_in:
@@ -104,53 +103,47 @@ def process_csv_to_excel_from_file(file_path):
         df["Theo Flow"] = df.apply(calculate_theo_flow, axis=1)
         FTheo_L = column_letter(df.columns.get_loc("Theo Flow"))
 
-        # 2. Raw Efficiencies
+        # 2. Raw Efficiencies (Removed < 0.1 Filter)
         def raw_eff_f1(row):
             rn = row.name + offset + 2
             expr = f"{F1_letter}{rn}/{FTheo_L}{rn}"
-            return f"=IFERROR(IF({expr}<0.1,NA(),{expr}),NA())"
+            return f"=IFERROR({expr},NA())"
 
         def raw_eff_f3(row):
             rn = row.name + offset + 2
             expr = f"{F3_letter}{rn}/{FTheo_L}{rn}"
-            return f"=IFERROR(IF({expr}<0.1,NA(),{expr}),NA())"
+            return f"=IFERROR({expr},NA())"
 
         df["EffRaw_F1"] = df.apply(raw_eff_f1, axis=1)
         df["EffRaw_F3"] = df.apply(raw_eff_f3, axis=1)
         W1_L = column_letter(df.columns.get_loc("EffRaw_F1"))
         W3_L = column_letter(df.columns.get_loc("EffRaw_F3"))
 
-        # 3. Efficiency A (Fwd/F3) and B (Rev/F1)
+        # 3. Directional Efficiencies (A = Fwd/Sensor 1, B = Rev/Sensor 3)
+        # Filter (>= 0.1) is applied here to keep chart bars clean
         if U_letter and T_trend_letter:
-            # Efficiency A: Show EffRaw_F1 when TP Reversed is 1
             def eff_a_formula(row):
                 rn = row.name + offset + 2
-                return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=1),${W1_L}{rn},NA())'
+                return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=1,${W1_L}{rn}>=0.1),${W1_L}{rn},NA())'
 
             # Efficiency B: Show EffRaw_F3 when TP Reversed is 0
             def eff_b_formula(row):
                 rn = row.name + offset + 2
-                return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=0),${W3_L}{rn},NA())'
+                return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=0,${W3_L}{rn}>=0.1),${W3_L}{rn},NA())'
 
             df["Efficiency A"] = df.apply(eff_a_formula, axis=1)
             df["Efficiency B"] = df.apply(eff_b_formula, axis=1)
             
-            # 4. Average Efficiency Calculation
-            col_a_let = column_letter(df.columns.get_loc("Efficiency A"))
-            col_b_let = column_letter(df.columns.get_loc("Efficiency B"))
-            
+            # 4. Average Efficiency (Calculated from Raw Sources)
             def eff_avg_formula(row):
                 rn = row.name + offset + 2
-                # Excel's AVERAGE function ignores NA values automatically
-                return f'=IFERROR(AVERAGE(${col_a_let}{rn},${col_b_let}{rn}),NA())'
+                return f'=IFERROR(AVERAGE(${W1_L}{rn},${W3_L}{rn}),NA())'
             
             df["Average Efficiency"] = df.apply(eff_avg_formula, axis=1)
 
         # --- Excel Export ---
         timestamp = get_export_now().strftime("%m-%d-%Y_%I-%M-%S_%p")
         excel_file = os.path.join(os.path.dirname(file_path), f"TestResults_{timestamp}.xlsx")
-        # Removed this 2026-05-14 at ~14:30
-	#FORMULA_COLS = {"Theo Flow", "EffRaw_F1", "EffRaw_F3", "Efficiency A", "Efficiency B"}
 
         with pd.ExcelWriter(excel_file, engine="xlsxwriter") as writer:
             pd.DataFrame(metadata).to_excel(writer, index=False, sheet_name="Data", header=False)
@@ -177,8 +170,6 @@ def process_csv_to_excel_from_file(file_path):
             for col_idx, col_name in enumerate(df.columns):
                 max_data_len = df_str[col_name].map(len).max() if len(df) > 0 else 0
                 col_width = max(len(col_name), max_data_len) + 2
-	        # Removed this 2026-05-14 at ~14:30                
-		#if col_idx == 0: col_width = max(col_width, max((len(str(r[0])) for r in metadata if r), default=0) + 2)
                 worksheet.set_column(col_idx, col_idx, min(col_width, 40))
 
             # Apply percent formatting
@@ -201,7 +192,7 @@ def process_csv_to_excel_from_file(file_path):
                 first_row, chart_last = offset + 2, len(df) + offset + 1
                 def time_cats(): return f"=Data!${B_letter}${first_row}:${B_letter}${chart_last}"
 
-                # 1. BASE Chart: Efficiency Columns (Left Axis)
+                # 1. BASE Chart (Efficiency Columns on Primary Axis)
                 chart = workbook.add_chart({"type": "column"})
                 
                 # Fwd Efficiency
@@ -209,41 +200,42 @@ def process_csv_to_excel_from_file(file_path):
                 chart.add_series({
                     "name": "Fwd Efficiency (F1)", "categories": time_cats(),
                     "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
-                    "fill": {"color": C_EFF_FWD, "transparency": 30}, "border": {"none": True},
+                    "fill": {"color": C_EFF_FWD, "transparency": 35}, "border": {"none": True},
                 })
                 # Rev Efficiency
                 col_eb = column_letter(df.columns.get_loc("Efficiency B"))
                 chart.add_series({
                     "name": "Rev Efficiency (F3)", "categories": time_cats(),
                     "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
-                    "fill": {"color": C_EFF_REV, "transparency": 30}, "border": {"none": True},
+                    "fill": {"color": C_EFF_REV, "transparency": 35}, "border": {"none": True},
                 })
 
-                # 2. ADD AVERAGE EFFICIENCY LINE (STILL ON LEFT AXIS)
+                # 2. COMBINE AVERAGE LINE (Left Axis)
                 col_avg = column_letter(df.columns.get_loc("Average Efficiency"))
                 avg_line_chart = workbook.add_chart({"type": "line"})
                 avg_line_chart.add_series({
                     "name": "Average Efficiency", "categories": time_cats(),
                     "values": f"=Data!${col_avg}${first_row}:${col_avg}${chart_last}",
-                    "line": {"color": C_WHITE, "width": 2},
+                    "line": {"color": C_WHITE, "width": 2.25},
                 })
                 chart.combine(avg_line_chart)
 
-                # 3. COMBINED Chart: Pressure Areas (Right Axis)
+                # 3. COMBINE PRESSURE AREAS (Right Axis)
                 pressure_chart = workbook.add_chart({"type": "area"})
                 pressure_chart.add_series({
                     "name": "P5 Pressure", "categories": time_cats(),
                     "values": f"=Data!${P5_letter}${first_row}:${P5_letter}${chart_last}",
-                    "fill": {"color": C_PRESS_P5, "transparency": 60},
+                    "fill": {"color": C_PRESS_P5, "transparency": 65},
                     "border": {"color": C_PRESS_P5, "width": 1}, "y2_axis": True,
                 })
                 pressure_chart.add_series({
                     "name": "P1 Pressure", "categories": time_cats(),
                     "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${chart_last}",
-                    "fill": {"color": C_PRESS_P1, "transparency": 60},
+                    "fill": {"color": C_PRESS_P1, "transparency": 65},
                     "border": {"color": C_PRESS_P1, "width": 1}, "y2_axis": True,
                 })
                 
+                # LC Setpoint Line
                 if H_lc_letter:
                     pressure_chart.add_series({
                         "name": "LC Setpoint", "categories": time_cats(),
@@ -261,7 +253,7 @@ def process_csv_to_excel_from_file(file_path):
 
                 # X Axis
                 chart.set_x_axis({
-                    "name": "Time", "name_font": {"color": C_WHITE}, 
+                    "name": "Time Index", "name_font": {"color": C_WHITE}, 
                     "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE}
                 })
 
@@ -269,8 +261,7 @@ def process_csv_to_excel_from_file(file_path):
                 chart.set_y_axis({
                     "name": "Efficiency %", "name_font": {"color": C_WHITE}, 
                     "num_font": {"color": C_WHITE}, "min": 0, "max": 1.1, 
-                    "major_unit": 0.2, "num_format": "0%",
-                    "major_gridlines": {"visible": True, "line": {"color": C_GRIDLINE}},
+                    "num_format": "0%", "major_gridlines": {"visible": True, "line": {"color": C_GRIDLINE}},
                     "line": {"color": C_WHITE},
                 })
 
@@ -278,7 +269,7 @@ def process_csv_to_excel_from_file(file_path):
                 y2_cfg = {
                     "name": "Pressure (PSI)", "name_font": {"color": C_WHITE},
                     "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE},
-                    "min": 0, "max": 3500,
+                    "min": 0, "max": 3500, "visible": True
                 }
                 chart.set_y2_axis(y2_cfg)
                 pressure_chart.set_y2_axis(y2_cfg)
