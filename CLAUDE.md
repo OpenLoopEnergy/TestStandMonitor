@@ -7,7 +7,7 @@ Hydraulic pump test stand web interface. Rebuilt from Flask/SQLite/Jinja2 into F
 [Raspberry Pi]              [Railway — Backend]           [Vercel — Frontend]
   pi/can_publisher.py  →   FastAPI (backend/main.py)  →  React + TypeScript
   pi/can_decoder.py        ├─ /ws/pi  (from Pi)           frontend/teststandfrontend/
-  pi/sim_mode.py (dev)     ├─ /ws/frontend (to browsers)
+                           ├─ /ws/frontend (to browsers)
                            ├─ REST API
                            └─ SQLAlchemy (SQLite dev / PostgreSQL prod)
 ```
@@ -16,9 +16,9 @@ Hydraulic pump test stand web interface. Rebuilt from Flask/SQLite/Jinja2 into F
 ```powershell
 # Terminal 1 — Backend (run from project root, NOT from inside backend/)
 pip install -r backend/requirements.txt
-$env:MOCK_MODE="true"; python -m uvicorn backend.main:app --reload --port 8000
+python -m uvicorn backend.main:app --reload --port 8000
 
-# Terminal 2 — Frontend
+# Terminal 2 — Frontend (note: frontend is inside frontend/teststandfrontend/, not frontend/)
 cd frontend/teststandfrontend
 npm install
 npm run dev
@@ -35,7 +35,6 @@ npm run dev
 | `backend/exportXLSX.py` | Excel export — preserved from original, do not change structure |
 | `pi/can_decoder.py` | All 17 CAN message decoders (preserved from original) |
 | `pi/can_publisher.py` | Runs on Pi: reads can0, sends frames to backend WS |
-| `pi/sim_mode.py` | Dev sim: replays log_data.csv or generates synthetic data |
 | `pi/teststand-publisher.service` | systemd unit for auto-start on Pi boot |
 | `Procfile` | Railway deployment command |
 | `.env.example` | All environment variables |
@@ -50,7 +49,7 @@ npm run dev
 ## Deployment
 | Service | What | Key env vars |
 |---------|------|-------------|
-| Railway | FastAPI backend | `DATABASE_URL`, `MOCK_MODE=false`, `ALLOWED_ORIGINS`, `EXPORT_DIR` |
+| Railway | FastAPI backend | `DATABASE_URL`, `ALLOWED_ORIGINS`, `EXPORT_DIR` |
 | Supabase | PostgreSQL DB | Provides `DATABASE_URL` |
 | Vercel | React frontend | `VITE_WS_URL=wss://...railway.app/ws/frontend` |
 | Pi | CAN publisher | `BACKEND_WS_URL=wss://...railway.app/ws/pi` |

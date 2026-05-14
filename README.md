@@ -10,12 +10,10 @@ Hydraulic pump test stand monitoring and data export system. Built with FastAPI 
 [Raspberry Pi]               [Backend — FastAPI]            [Frontend — React/TS]
   pi/can_publisher.py  →    backend/main.py (port 8000)  →  localhost:5173
   pi/can_decoder.py         ├─ /ws/pi       ← Pi data
-  pi/sim_mode.py            ├─ /ws/frontend → browser
-  (mock mode in dev)        ├─ REST API
+                            ├─ /ws/frontend → browser
+                            ├─ REST API
                             └─ SQLite (dev) / PostgreSQL (prod)
 ```
-
-In local development, **MOCK_MODE** replaces the Raspberry Pi with a software simulator — no hardware required.
 
 ---
 
@@ -34,42 +32,22 @@ In local development, **MOCK_MODE** replaces the Raspberry Pi with a software si
 
 ### 1. Clone the repo
 
-```bash
+```powershell
 git clone <repo-url>
 cd TestStandWebInterface
 ```
 
-### 2. Configure environment variables
+### 2. Install backend dependencies
 
-Copy the example env file to `.env` in the project root:
+Run from the **project root** (not inside `backend/`):
 
-```bash
-cp frontend/teststandfrontend/.env.example .env
-```
-
-The defaults work for local development as-is:
-
-```env
-DATABASE_URL=sqlite:///./dev.db
-MOCK_MODE=true
-SIM_INTERVAL=0.5
-FLASK_PORT=8000
-EXPORT_DIR=./exports
-```
-
-> **MOCK_MODE=true** activates the built-in simulator. The backend generates synthetic pump data so you can develop and test without a Raspberry Pi or CAN bus connection.
-
-### 3. Install backend dependencies
-
-Run this from the **project root** (not inside `backend/`):
-
-```bash
+```powershell
 pip install -r backend/requirements.txt
 ```
 
-### 4. Install frontend dependencies
+### 3. Install frontend dependencies
 
-```bash
+```powershell
 cd frontend/teststandfrontend
 npm install
 cd ../..
@@ -86,13 +64,7 @@ You need **two terminals** running simultaneously.
 Run from the **project root**:
 
 ```powershell
-# PowerShell
-$env:MOCK_MODE="true"; python -m uvicorn backend.main:app --reload --port 8000
-```
-
-```bash
-# bash / Git Bash
-MOCK_MODE=true python -m uvicorn backend.main:app --reload --port 8000
+python -m uvicorn backend.main:app --reload --port 8000
 ```
 
 The backend starts at **http://localhost:8000**.  
@@ -100,7 +72,7 @@ On first run it creates `dev.db` (SQLite) and seeds default settings automatical
 
 ### Terminal 2 — Frontend
 
-```bash
+```powershell
 cd frontend/teststandfrontend
 npm run dev
 ```
@@ -114,22 +86,24 @@ Vite proxies all API calls and WebSocket connections to port 8000, so no extra c
 ## Verifying It Works
 
 1. Open **http://localhost:5173** — you should see the test stand dashboard.
-2. Live signal values (S1, TP, F1, pressures, etc.) should be updating if `MOCK_MODE=true`.
-3. The **Pi Connected** indicator in the UI turns green when the simulator is running.
-4. Navigate to the **Settings** tab and confirm the Input Factor and other defaults loaded correctly.
+2. Connect the Raspberry Pi — the **Pi Connected** indicator in the header turns green when the Pi WebSocket connects.
+3. Live signal values (S1, TP, F1, pressures, etc.) will populate once the Pi is sending data.
+4. Confirm the Input Factor and other defaults loaded correctly in the Test Info panel.
 
 ---
 
 ## Running an Export
 
-1. Let the simulator run for a few seconds so data gets logged (trending must be active).
+1. Start a test with Trending active so data gets logged.
 2. Click **Export Data** in the UI.
 3. An `.xlsx` file is saved to the `exports/` folder in the project root and downloaded by the browser.
 
-To test with the debug logger (logs every 0.5 s regardless of trending):
+To enable debug mode (logs every 0.5 s regardless of trending state):
 
 ```powershell
-# PowerShell — enable debug mode via the UI toggle, or call the API directly:
+# Via the UI: click the Debug toggle in the header (Admin mode required)
+
+# Or call the API directly:
 Invoke-RestMethod -Method Post -Uri http://localhost:8000/set_debug_mode `
   -ContentType "application/json" -Body '{"enabled": true}'
 ```
@@ -158,7 +132,7 @@ TestStandWebInterface/
 ├── pi/
 │   ├── can_publisher.py      # Runs on Pi: reads can0, sends to backend
 │   ├── can_decoder.py        # All 17 CAN message decoders
-│   └── sim_mode.py           # Dev simulator (replays CSV or synthetic data)
+│   └── sim_mode.py           # Standalone simulator (replays CSV or synthetic data)
 ├── exports/                  # Generated .xlsx files land here
 ├── .env                      # Local environment variables (not committed)
 └── requirements.txt          # Python dependencies (root alias)
@@ -171,13 +145,8 @@ TestStandWebInterface/
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DATABASE_URL` | `sqlite:///./dev.db` | SQLite for dev, PostgreSQL URL for prod |
-| `MOCK_MODE` | `true` | `true` = run simulator; `false` = wait for real Pi |
-| `SIM_INTERVAL` | `0.5` | Simulator tick rate in seconds |
 | `EXPORT_DIR` | `./exports` | Directory where `.xlsx` files are saved |
 | `ALLOWED_ORIGINS` | _(unset)_ | CORS whitelist, e.g. `http://localhost:5173` |
-| `AZURE_TENANT_ID` | _(unset)_ | SharePoint upload — leave blank to disable |
-| `AZURE_CLIENT_ID` | _(unset)_ | SharePoint upload — leave blank to disable |
-| `AZURE_CLIENT_SECRET` | _(unset)_ | SharePoint upload — leave blank to disable |
 
 ---
 
@@ -185,25 +154,37 @@ TestStandWebInterface/
 
 **`ModuleNotFoundError: No module named 'backend'`**  
 Run uvicorn from the **project root**, not from inside the `backend/` folder:
-```bash
-# Correct
+```powershell
+# Correct — run from project root
 python -m uvicorn backend.main:app --reload --port 8000
 
 # Wrong — do not do this
-cd backend && uvicorn main:app ...
+cd backend
+uvicorn main:app ...
+```
+
+**npm command not found / package.json missing**  
+The frontend lives inside `frontend/teststandfrontend/`, not `frontend/`:
+```powershell
+# Correct
+cd frontend/teststandfrontend
+npm run dev
+
+# Wrong
+cd frontend
+npm run dev
 ```
 
 **Port 8000 already in use**  
 Kill the existing process or change the port:
 ```powershell
-# Find and kill (PowerShell)
 Get-Process -Name python | Stop-Process
 ```
 
 **`dev.db` schema out of date after pulling changes**  
 Delete `dev.db` and restart the backend — `init_db()` recreates it and runs any pending column migrations automatically:
-```bash
-rm dev.db
+```powershell
+Remove-Item dev.db
 ```
 
 **Frontend shows "disconnected" / no live data**  
@@ -211,11 +192,11 @@ Make sure the backend is running on port 8000 before starting the frontend. The 
 
 ---
 
-## Production Deployment 1
+## Production Deployment
 
 | Service | Purpose | Key env vars |
 |---------|---------|-------------|
-| Railway | FastAPI backend | `DATABASE_URL`, `MOCK_MODE=false`, `ALLOWED_ORIGINS`, `EXPORT_DIR` |
+| Railway | FastAPI backend | `DATABASE_URL`, `ALLOWED_ORIGINS`, `EXPORT_DIR` |
 | Supabase | PostgreSQL database | Provides `DATABASE_URL` |
 | Vercel | React frontend | `VITE_WS_URL=wss://...railway.app/ws/frontend` |
 | Raspberry Pi | CAN bus publisher | `BACKEND_WS_URL=wss://...railway.app/ws/pi` |

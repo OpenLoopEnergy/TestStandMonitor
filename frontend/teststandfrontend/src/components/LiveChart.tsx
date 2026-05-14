@@ -18,6 +18,37 @@ const Y_MAX: Record<ChartSignal, number> = {
   TheoFlow: 100, Efficiency: 110,
 }
 
+function getChartColors() {
+  const isDark = document.documentElement.classList.contains('dark')
+  return {
+    tick:         isDark ? '#9ca3af' : '#6b7280',
+    grid:         isDark ? '#374151' : '#d1d5db',
+    legend:       isDark ? '#f5f5f5' : '#111827',
+    tooltipBg:    isDark ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.97)',
+    tooltipTitle: isDark ? '#f5f5f5' : '#111827',
+    tooltipBody:  isDark ? '#d1d5db' : '#374151',
+    tooltipBorder:isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)',
+  }
+}
+
+function applyChartColors(chart: Chart) {
+  const c = getChartColors()
+  const scales = chart.options.scales as Record<string, any>
+  scales.x.ticks.color = c.tick
+  scales.x.grid.color  = c.grid
+  scales.y.ticks.color = c.tick
+  scales.y.grid.color  = c.grid
+
+  const plugins = chart.options.plugins as Record<string, any>
+  plugins.legend.labels.color      = c.legend
+  plugins.tooltip.backgroundColor  = c.tooltipBg
+  plugins.tooltip.titleColor       = c.tooltipTitle
+  plugins.tooltip.bodyColor        = c.tooltipBody
+  plugins.tooltip.borderColor      = c.tooltipBorder
+  plugins.tooltip.borderWidth      = 1
+  chart.update('none')
+}
+
 interface Props {
   signal: ChartSignal
   liveData: LiveData
@@ -28,13 +59,14 @@ export function LiveChart({ signal, liveData, historyPoints }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
 
-  // Build datasets from either history (for DB signals) or live accumulated points
+  // Create or update chart data
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
     const labels = historyPoints.map(p => new Date(p.timestamp))
     const values = historyPoints.map(p => p.value)
+    const c = getChartColors()
 
     if (!chartRef.current) {
       const ctx = canvas.getContext('2d')!
@@ -65,22 +97,24 @@ export function LiveChart({ signal, liveData, historyPoints }: Props) {
             x: {
               type: 'time',
               time: { unit: 'second' },
-              ticks: { color: '#9ca3af', maxTicksLimit: 8 },
-              grid: { color: '#374151' },
+              ticks: { color: c.tick, maxTicksLimit: 8 },
+              grid:  { color: c.grid },
             },
             y: {
               beginAtZero: true,
               max: Y_MAX[signal] ?? 100,
-              ticks: { color: '#9ca3af' },
-              grid: { color: '#374151' },
+              ticks: { color: c.tick },
+              grid:  { color: c.grid },
             },
           },
           plugins: {
-            legend: { labels: { color: '#f5f5f5' } },
+            legend: { labels: { color: c.legend } },
             tooltip: {
-              backgroundColor: 'rgba(0,0,0,0.8)',
-              titleColor: '#f5f5f5',
-              bodyColor: '#f5f5f5',
+              backgroundColor: c.tooltipBg,
+              titleColor:      c.tooltipTitle,
+              bodyColor:       c.tooltipBody,
+              borderColor:     c.tooltipBorder,
+              borderWidth:     1,
             },
           },
         },
@@ -90,13 +124,20 @@ export function LiveChart({ signal, liveData, historyPoints }: Props) {
       chart.data.labels = labels
       chart.data.datasets[0].data = values
       chart.data.datasets[0].label = `${signal} Data`
-      chart.options.scales!.y = {
-        ...chart.options.scales!.y,
-        max: Y_MAX[signal] ?? 100,
-      }
-      chart.update('none')
+      ;(chart.options.scales as Record<string, any>).y.max = Y_MAX[signal] ?? 100
+      // Refresh colors in case theme changed between updates
+      applyChartColors(chart)
     }
   }, [signal, historyPoints, liveData])
+
+  // Watch for dark/light class toggled on <html> and re-color immediately
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      if (chartRef.current) applyChartColors(chartRef.current)
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
 
   // Destroy chart on unmount
   useEffect(() => {

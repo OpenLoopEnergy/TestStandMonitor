@@ -30,13 +30,8 @@ async def lifespan(app: FastAPI):
     init_db()
 
     logger.info("Starting background CSV logger…")
-    logger.info("Starting sim mode if MOCK_MODE=true…")
 
     tasks = [asyncio.create_task(run_logger()), asyncio.create_task(run_pi_watchdog())]
-
-    if os.getenv("MOCK_MODE", "false").lower() == "true":
-        from pi.sim_mode import run_sim
-        tasks.append(asyncio.create_task(run_sim()))
 
     yield  # App running
 

@@ -20,12 +20,12 @@ export function DataTable({ rows, inputFactor }: Props) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-xs text-left text-gray-300 border-collapse">
+      <table className="w-full text-xs text-left text-gray-700 border-collapse dark:text-gray-300">
         <thead>
-          <tr className="bg-white/10 text-gray-400 uppercase tracking-wide">
+          <tr className="bg-black/10 text-gray-600 uppercase tracking-wide dark:bg-white/10 dark:text-gray-400">
             {['Date','Time','S1','SP','TP%','Cycle','Cyc Timer','LC Set','LC Reg','Step',
               'F1','F2','F3','T1','T3','P1','P2','P3','P4','P5','Theo Flow','Eff% A','Eff% B'].map(h => (
-              <th key={h} className="px-2 py-2 whitespace-nowrap border-b border-white/10">{h}</th>
+              <th key={h} className="px-2 py-2 whitespace-nowrap border-b border-black/10 dark:border-white/10">{h}</th>
             ))}
           </tr>
         </thead>
@@ -41,7 +41,7 @@ export function DataTable({ rows, inputFactor }: Props) {
             const effb = theoFlow > 0 ? (f3 / theoFlow) * 100 : 0
 
             return (
-              <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+              <tr key={i} className="border-b border-black/5 hover:bg-black/5 transition-colors dark:border-white/5 dark:hover:bg-white/5">
                 <td className="px-2 py-1.5">{row.Date}</td>
                 <td className="px-2 py-1.5">{row.Time}</td>
                 <td className="px-2 py-1.5">{row.S1 ?? '—'}</td>

@@ -70,7 +70,7 @@ export function HeaderInfoPanel({ onInputFactorChange, isAdmin = false }: Props)
             <select
               value={draft[key] ?? 'cu/in'}
               onChange={e => setDraft(d => ({ ...d, [key]: e.target.value }))}
-              className="bg-white/10 border border-white/20 rounded px-2 py-1 text-sm text-white"
+              className="bg-black/10 border border-black/20 rounded px-2 py-1 text-sm text-gray-900 dark:bg-white/10 dark:border-white/20 dark:text-white"
             >
               <option value="cu/in">cu/in</option>
               <option value="cu/cm">cu/cm</option>
@@ -80,26 +80,26 @@ export function HeaderInfoPanel({ onInputFactorChange, isAdmin = false }: Props)
               type={type}
               value={val as string}
               onChange={e => setDraft(d => ({ ...d, [key]: e.target.value }))}
-              className="bg-white/10 border border-white/20 rounded px-2 py-1 text-sm text-white"
+              className="bg-black/10 border border-black/20 rounded px-2 py-1 text-sm text-gray-900 dark:bg-white/10 dark:border-white/20 dark:text-white"
             />
           )
         ) : (
-          <span className="text-sm text-white">{val as string}</span>
+          <span className="text-sm text-gray-900 dark:text-white">{val as string}</span>
         )}
       </div>
     )
   }
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+    <div className="bg-black/5 border border-black/10 rounded-xl p-3 dark:bg-white/5 dark:border-white/10">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Test Info</h3>
+        <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide dark:text-gray-300">Test Info</h3>
         {isAdmin && (
           !editing
-            ? <button onClick={startEdit} className="cursor-pointer text-sm bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-lg font-semibold transition-colors">Edit</button>
+            ? <button onClick={startEdit} className="cursor-pointer text-sm bg-black/10 hover:bg-black/20 px-5 py-2.5 rounded-lg font-semibold transition-colors text-gray-900 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">Edit</button>
             : <div className="flex gap-2">
-                <button onClick={save} className="cursor-pointer text-sm bg-red-700 hover:bg-red-600 px-5 py-2.5 rounded-lg font-semibold transition-colors">Save</button>
-                <button onClick={() => setEditing(false)} className="cursor-pointer text-sm bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-lg font-semibold transition-colors">Cancel</button>
+                <button onClick={save} className="cursor-pointer text-sm bg-red-700 hover:bg-red-600 px-5 py-2.5 rounded-lg font-semibold transition-colors text-white">Save</button>
+                <button onClick={() => setEditing(false)} className="cursor-pointer text-sm bg-black/10 hover:bg-black/20 px-5 py-2.5 rounded-lg font-semibold transition-colors text-gray-900 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">Cancel</button>
               </div>
         )}
       </div>
@@ -116,7 +116,7 @@ export function HeaderInfoPanel({ onInputFactorChange, isAdmin = false }: Props)
       </div>
 
       {toast && (
-        <div className={`text-xs px-3 py-2 rounded-lg ${toast.type === 'success' ? 'bg-green-800/60 text-green-200' : 'bg-red-800/60 text-red-200'}`}>
+        <div className={`text-xs px-3 py-2 rounded-lg ${toast.type === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-800/60 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-800/60 dark:text-red-200'}`}>
           {toast.msg}
         </div>
       )}

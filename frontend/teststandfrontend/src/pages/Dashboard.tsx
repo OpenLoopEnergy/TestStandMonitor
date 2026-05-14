@@ -4,6 +4,7 @@ import { SignalCard } from '../components/SignalCard'
 import { LiveChart } from '../components/LiveChart'
 import { DataTable } from '../components/DataTable'
 import { HeaderInfoPanel } from '../components/HeaderInfoPanel'
+import { ThemeToggle } from '../components/ThemeToggle'
 import type { ChartSignal, LiveData, LogRow, SignalPoint } from '../types/signals'
 
 const COMPUTED_SIGNALS: ChartSignal[] = ['TheoFlow', 'Efficiency']
@@ -206,15 +207,15 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-[#1a1a1a] text-white">
+    <div className="h-screen overflow-hidden flex flex-col bg-gray-100 text-gray-900 dark:bg-[#1a1a1a] dark:text-white">
 
       {/* ── Export Loading Overlay ── */}
       {isExporting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#232323] border border-white/10 rounded-2xl px-10 py-8 flex flex-col items-center gap-4 shadow-2xl">
-            <div className="w-10 h-10 border-4 border-white/20 border-t-red-500 rounded-full animate-spin" />
-            <p className="text-white font-semibold text-base">Building Export…</p>
-            <p className="text-gray-400 text-sm">Generating Excel file, this may take a moment.</p>
+          <div className="bg-white border border-gray-200 rounded-2xl px-10 py-8 flex flex-col items-center gap-4 shadow-2xl dark:bg-[#232323] dark:border-white/10">
+            <div className="w-10 h-10 border-4 border-black/20 border-t-red-500 rounded-full animate-spin dark:border-white/20" />
+            <p className="text-gray-900 font-semibold text-base dark:text-white">Building Export…</p>
+            <p className="text-gray-600 text-sm dark:text-gray-400">Generating Excel file, this may take a moment.</p>
           </div>
         </div>
       )}
@@ -222,16 +223,16 @@ export default function Dashboard() {
       {/* ── Auto-clear Modal ── */}
       {isAdmin && showClearModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="bg-[#232323] border border-white/10 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
-            <div className={`text-center mb-1 text-xs font-bold uppercase tracking-widest ${isAutomatic ? 'text-blue-400' : 'text-gray-400'}`}>
+          <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl dark:bg-[#232323] dark:border-white/10">
+            <div className={`text-center mb-1 text-xs font-bold uppercase tracking-widest ${isAutomatic ? 'text-blue-500 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
               Automatic Mode Detected
             </div>
-            <h2 className="text-xl font-bold text-center mb-2">Clear Data Table?</h2>
-            <p className="text-sm text-gray-400 text-center mb-6">
+            <h2 className="text-xl font-bold text-center mb-2 text-gray-900 dark:text-white">Clear Data Table?</h2>
+            <p className="text-sm text-gray-600 text-center mb-6 dark:text-gray-400">
               It looks like you're starting an automatic test. The data table should be cleared before each test to avoid mixing results.
-              Auto-clearing in <span className="text-white font-bold text-lg">{countdown}</span>s…
+              Auto-clearing in <span className="text-gray-900 font-bold text-lg dark:text-white">{countdown}</span>s…
             </p>
-            <div className="w-full bg-white/10 rounded-full h-1.5 mb-6">
+            <div className="w-full bg-black/10 rounded-full h-1.5 mb-6 dark:bg-white/10">
               <div
                 className="bg-red-600 h-1.5 rounded-full transition-all duration-1000"
                 style={{ width: `${(countdown / AUTO_CLEAR_SECONDS) * 100}%` }}
@@ -240,13 +241,13 @@ export default function Dashboard() {
             <div className="flex gap-3">
               <button
                 onClick={() => { setShowClearModal(false); doClear() }}
-                className="flex-1 bg-red-700 hover:bg-red-600 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+                className="flex-1 bg-red-700 hover:bg-red-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
               >
                 Clear Data Table Now
               </button>
               <button
                 onClick={() => setShowClearModal(false)}
-                className="flex-1 bg-white/10 hover:bg-white/20 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white"
               >
                 Keep Data
               </button>
@@ -256,21 +257,21 @@ export default function Dashboard() {
       )}
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 shrink-0">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 shrink-0 dark:border-white/10">
         <div className="flex items-center gap-4">
           <div
-            className={`bg-white rounded-md px-4 py-2 cursor-pointer select-none outline-none${logoBounce ? ' logo-bounce' : ''}`}
+            className={`bg-white border border-gray-200 rounded-md px-4 py-2 cursor-pointer select-none outline-none dark:border-transparent${logoBounce ? ' logo-bounce' : ''}`}
             style={{ WebkitTapHighlightColor: 'transparent' }}
             onClick={handleLogoClick}
             title={isAdmin ? 'Admin mode active — click 10× to deactivate' : ''}
           >
             <img src="/logo.png" alt="Open Loop Energy" className="h-14 object-contain pointer-events-none" />
           </div>
-          <span className="text-lg font-bold tracking-tight text-white/90">Test Stand Monitor</span>
+          <span className="text-lg font-bold tracking-tight text-gray-900 dark:text-white/90">Test Stand Monitor</span>
         </div>
         <div className="flex items-center gap-3">
           {isAdmin && (
-            <span className="text-xs px-2 py-1 rounded-full font-bold bg-amber-900/60 text-amber-300 border border-amber-700/50">
+            <span className="text-xs px-2 py-1 rounded-full font-bold bg-amber-100 text-amber-700 border border-amber-300 dark:bg-amber-900/60 dark:text-amber-300 dark:border-amber-700/50">
               Admin
             </span>
           )}
@@ -279,8 +280,8 @@ export default function Dashboard() {
               onClick={handleDebugToggle}
               className={`cursor-pointer text-sm px-4 py-2 rounded-full font-bold border transition-colors ${
                 data.debug_mode
-                  ? 'bg-orange-900/60 text-orange-300 border-orange-700/50'
-                  : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
+                  ? 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/60 dark:text-orange-300 dark:border-orange-700/50'
+                  : 'bg-black/5 text-gray-600 border-black/10 hover:bg-black/10 dark:bg-white/5 dark:text-gray-400 dark:border-white/10 dark:hover:bg-white/10'
               }`}
             >
               {data.debug_mode ? '● Debug' : '○ Debug'}
@@ -289,29 +290,30 @@ export default function Dashboard() {
           {/* Mode — prominent */}
           <span className={`text-sm px-3 py-1 rounded-full font-bold border ${
             isAutomatic
-              ? 'bg-blue-900/60 text-blue-300 border-blue-700'
-              : 'bg-white/5 text-gray-300 border-white/10'
+              ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/60 dark:text-blue-300 dark:border-blue-700'
+              : 'bg-black/5 text-gray-600 border-black/10 dark:bg-white/5 dark:text-gray-300 dark:border-white/10'
           }`}>
             {isAutomatic ? '⚙ Automatic' : '✋ Manual'}
           </span>
           <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-            connected ? 'bg-green-800/60 text-green-300' : 'bg-red-900/60 text-red-300'
+            connected ? 'bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300'
           }`}>
             {connected ? '● Backend' : '○ Backend'}
           </span>
           <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-            data.pi_connected ? 'bg-green-800/60 text-green-300' : 'bg-red-900/60 text-red-300'
+            data.pi_connected ? 'bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300'
           }`}>
             {data.pi_connected ? '● Raspberry Pi' : '○ Raspberry Pi'}
           </span>
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
             {data.trending === 1
-              ? <span className="text-yellow-400 font-semibold">● Trending</span>
-              : <span className="text-gray-500">○ Idle</span>}
+              ? <span className="text-yellow-600 font-semibold dark:text-yellow-400">● Trending</span>
+              : <span className="text-gray-400 dark:text-gray-500">○ Idle</span>}
           </span>
+          <ThemeToggle />
           <a
             href="/past-tests"
-            className="cursor-pointer text-base bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-lg font-semibold transition-colors"
+            className="cursor-pointer text-base bg-black/10 hover:bg-black/20 text-gray-900 px-5 py-2.5 rounded-lg font-semibold transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white"
           >
             Past Tests
           </a>
@@ -326,7 +328,7 @@ export default function Dashboard() {
 
           {/* System state */}
           <div className="shrink-0">
-            <p className="text-xs text-white/50 uppercase tracking-widest mb-1.5">System State</p>
+            <p className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 dark:text-white/50">System State</p>
             <div className="grid grid-cols-2 gap-1.5">
               <SignalCard label="SP"       value={`${data.sp} RPM`} />
               <SignalCard label="TP"       value={tp_pct} />
@@ -335,15 +337,15 @@ export default function Dashboard() {
               <SignalCard label="LC Reg"   value={data.lcRegulate ? 'ON' : 'OFF'} />
               <SignalCard label="Trending" value={data.trending ? 'YES' : 'NO'} />
             </div>
-            <div className="mt-1.5 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5">
-              <span className="text-xs text-gray-400">Step: </span>
-              <span className="text-xs text-white/80">{data.step || '—'}</span>
+            <div className="mt-1.5 bg-black/5 border border-black/10 rounded-lg px-3 py-1.5 dark:bg-white/5 dark:border-white/10">
+              <span className="text-xs text-gray-600 dark:text-gray-400">Step: </span>
+              <span className="text-xs text-gray-700 dark:text-white/80">{data.step || '—'}</span>
             </div>
           </div>
 
           {/* Sensors — fills remaining height, rows distributed evenly */}
           <div className="flex-1 flex flex-col min-h-0 gap-1">
-            <p className="text-xs text-white/50 uppercase tracking-widest shrink-0">Sensors</p>
+            <p className="text-xs text-gray-500 uppercase tracking-widest shrink-0 dark:text-white/50">Sensors</p>
             <div className="flex-1 grid grid-cols-2 gap-1.5 [grid-auto-rows:1fr]">
               {([
                 ['S1',         `${data.s1} RPM`],
@@ -377,9 +379,9 @@ export default function Dashboard() {
         {/* ── Right panel: chart + header + table (3/4 width) ── */}
         <div className="flex-1 flex flex-col gap-2 min-w-0">
           {/* Chart */}
-          <div className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col min-h-0">
-            <p className="text-xs text-white/50 uppercase tracking-widest mb-2 shrink-0">
-              Chart — <span className="text-white font-semibold">{activeSignal}</span>
+          <div className="flex-1 bg-black/5 border border-black/10 rounded-xl p-3 flex flex-col min-h-0 dark:bg-white/5 dark:border-white/10">
+            <p className="text-xs text-gray-500 uppercase tracking-widest mb-2 shrink-0 dark:text-white/50">
+              Chart — <span className="text-gray-900 font-semibold dark:text-white">{activeSignal}</span>
             </p>
             <div className="flex-1 min-h-0">
               <LiveChart signal={activeSignal} liveData={data} historyPoints={signalHistory()} />
@@ -392,7 +394,7 @@ export default function Dashboard() {
           </div>
 
           {/* Data Table */}
-          <div className="shrink-0 bg-white/5 border border-white/10 rounded-xl p-3">
+          <div className="shrink-0 bg-black/5 border border-black/10 rounded-xl p-3 dark:bg-white/5 dark:border-white/10">
             <div className="flex items-center justify-between mb-2">
               <div>
                 <h2 className="font-semibold text-xs">Data Table</h2>
@@ -400,12 +402,12 @@ export default function Dashboard() {
               </div>
               <div className="flex gap-2">
                 <button onClick={handleExport} disabled={isExporting}
-                  className="cursor-pointer text-sm bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2.5 rounded-lg font-semibold transition-colors">
+                  className="cursor-pointer text-sm bg-red-700 hover:bg-red-600 text-white disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2.5 rounded-lg font-semibold transition-colors">
                   {isExporting ? 'Exporting…' : 'Export Data'}
                 </button>
                 {isAdmin && (
                   <button onClick={handleClear}
-                    className="cursor-pointer text-sm bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-lg font-semibold transition-colors">
+                    className="cursor-pointer text-sm bg-black/10 hover:bg-black/20 text-gray-900 px-5 py-2.5 rounded-lg font-semibold transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">
                     Clear Table
                   </button>
                 )}
