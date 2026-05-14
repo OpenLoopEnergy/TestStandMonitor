@@ -13,6 +13,7 @@ LOGO_PATH = _ASSETS_LOGO if os.path.isfile(_ASSETS_LOGO) else _FALLBACK_LOGO
 C_RED         = '#EB1C23'   # Open Loop Red
 C_BLACK       = '#000000'
 C_WHITE       = '#FFFFFF'
+C_WHITE_Y2    = '#FEFEFE'
 C_CHARCOAL    = '#2E3E4D'
 C_AMBER       = '#ECA400'   # LC Setpoint Target
 
@@ -210,6 +211,7 @@ def process_csv_to_excel_from_file(file_path):
                         "name": "LC Setpoint", "categories": time_cats(),
                         "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
                         "line": {"color": C_AMBER, "width": 2, "dash_type": "dash"},
+                        "visible": True, "y_axis": True,
                     })
                 chart.combine(lc_line)
 
@@ -260,9 +262,9 @@ def process_csv_to_excel_from_file(file_path):
                 # Explicitly setting the y2 axis properties on the main chart forces the white labels
                 chart.set_y2_axis({
                     "name": "Efficiency %",
-                    "name_font": {"color": C_WHITE}, "num_font":  {"color": C_WHITE},
+                    "name_font": {"color": C_WHITE_Y2}, "num_font":  {"color": C_WHITE_Y2},
                     "min": 0, "max": 1.1, "major_unit": 0.2,
-                    "num_format": "0%", "line": {"color": C_WHITE},
+                    "num_format": "0%", "line": {"color": C_WHITE_Y2},
                     "visible": True
                 })
 
