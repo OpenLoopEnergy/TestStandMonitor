@@ -18,34 +18,41 @@ const Y_MAX: Record<ChartSignal, number> = {
   TheoFlow: 100, Efficiency: 110,
 }
 
+// Minimal shape we mutate on the Chart.js options objects
+type ScaleOpts = { ticks: { color: string }; grid: { color: string }; max?: number }
+type TooltipOpts = {
+  backgroundColor: string; titleColor: string; bodyColor: string
+  borderColor: string; borderWidth: number
+}
+type PluginOpts = { legend: { labels: { color: string } }; tooltip: TooltipOpts }
+
 function getChartColors() {
   const isDark = document.documentElement.classList.contains('dark')
   return {
-    tick:         isDark ? '#9ca3af' : '#6b7280',
-    grid:         isDark ? '#374151' : '#d1d5db',
-    legend:       isDark ? '#f5f5f5' : '#111827',
-    tooltipBg:    isDark ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.97)',
-    tooltipTitle: isDark ? '#f5f5f5' : '#111827',
-    tooltipBody:  isDark ? '#d1d5db' : '#374151',
-    tooltipBorder:isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)',
+    tick:          isDark ? '#9ca3af' : '#6b7280',
+    grid:          isDark ? '#374151' : '#d1d5db',
+    legend:        isDark ? '#f5f5f5' : '#111827',
+    tooltipBg:     isDark ? 'rgba(0,0,0,0.85)'         : 'rgba(255,255,255,0.97)',
+    tooltipTitle:  isDark ? '#f5f5f5'                   : '#111827',
+    tooltipBody:   isDark ? '#d1d5db'                   : '#374151',
+    tooltipBorder: isDark ? 'rgba(255,255,255,0.1)'     : 'rgba(0,0,0,0.12)',
   }
 }
 
 function applyChartColors(chart: Chart) {
   const c = getChartColors()
-  const scales = chart.options.scales as Record<string, any>
-  scales.x.ticks.color = c.tick
-  scales.x.grid.color  = c.grid
-  scales.y.ticks.color = c.tick
-  scales.y.grid.color  = c.grid
+  const scales = chart.options.scales as unknown as Record<string, ScaleOpts>
+  const plugins = chart.options.plugins as unknown as PluginOpts
 
-  const plugins = chart.options.plugins as Record<string, any>
-  plugins.legend.labels.color      = c.legend
-  plugins.tooltip.backgroundColor  = c.tooltipBg
-  plugins.tooltip.titleColor       = c.tooltipTitle
-  plugins.tooltip.bodyColor        = c.tooltipBody
-  plugins.tooltip.borderColor      = c.tooltipBorder
-  plugins.tooltip.borderWidth      = 1
+  if (scales['x']) { scales['x'].ticks.color = c.tick;  scales['x'].grid.color = c.grid }
+  if (scales['y']) { scales['y'].ticks.color = c.tick;  scales['y'].grid.color = c.grid }
+
+  plugins.legend.labels.color     = c.legend
+  plugins.tooltip.backgroundColor = c.tooltipBg
+  plugins.tooltip.titleColor      = c.tooltipTitle
+  plugins.tooltip.bodyColor       = c.tooltipBody
+  plugins.tooltip.borderColor     = c.tooltipBorder
+  plugins.tooltip.borderWidth     = 1
   chart.update('none')
 }
 
@@ -124,13 +131,13 @@ export function LiveChart({ signal, liveData, historyPoints }: Props) {
       chart.data.labels = labels
       chart.data.datasets[0].data = values
       chart.data.datasets[0].label = `${signal} Data`
-      ;(chart.options.scales as Record<string, any>).y.max = Y_MAX[signal] ?? 100
-      // Refresh colors in case theme changed between updates
+      const scales = chart.options.scales as unknown as Record<string, ScaleOpts>
+      if (scales['y']) scales['y'].max = Y_MAX[signal] ?? 100
       applyChartColors(chart)
     }
   }, [signal, historyPoints, liveData])
 
-  // Watch for dark/light class toggled on <html> and re-color immediately
+  // Recolor immediately when dark/light class changes on <html>
   useEffect(() => {
     const observer = new MutationObserver(() => {
       if (chartRef.current) applyChartColors(chartRef.current)

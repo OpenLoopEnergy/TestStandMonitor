@@ -21,7 +21,7 @@ export function HeaderInfoPanel({ onInputFactorChange, isAdmin = false }: Props)
         if (!isNaN(f)) onInputFactorChange(f)
       })
       .catch(() => {})
-  }, [])
+  }, [onInputFactorChange])
 
   function startEdit() {
     setDraft({ ...data })

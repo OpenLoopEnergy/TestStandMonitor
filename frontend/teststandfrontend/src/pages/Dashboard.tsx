@@ -93,7 +93,7 @@ export default function Dashboard() {
     })
   }
 
-  async function doClear() {
+  const doClear = useCallback(async () => {
     try {
       await fetch('/clear_data_table', { method: 'POST' })
       setLogRows([])
@@ -101,7 +101,7 @@ export default function Dashboard() {
     } catch {
       showToast('error', 'Failed to clear data table.')
     }
-  }
+  }, [showToast])
 
   // Detect Manual → Automatic transition and show the clear prompt
   // Only trigger once Pi is connected to avoid false positives on page load
@@ -113,7 +113,7 @@ export default function Dashboard() {
       }
     }
     prevPb4.current = data.pb4
-  }, [data.pb4, isAdmin])
+  }, [data.pb4, data.pi_connected, isAdmin])
 
   // Countdown timer when modal is visible
   useEffect(() => {
@@ -133,14 +133,14 @@ export default function Dashboard() {
       })
     }, 1000)
     return () => { if (countdownRef.current) clearInterval(countdownRef.current) }
-  }, [showClearModal])
+  }, [showClearModal, doClear])
 
   useEffect(() => {
     const now = new Date().toISOString()
     const max = 100
     setTheoFlowHistory(prev => { const n = [...prev, { timestamp: now, value: theoFlow }]; return n.length > max ? n.slice(-max) : n })
     setEfficiencyHistory(prev => { const n = [...prev, { timestamp: now, value: efficiency }]; return n.length > max ? n.slice(-max) : n })
-  }, [data])
+  }, [data, efficiency, theoFlow])
 
   // Clear history when switching to a non-computed signal
   useEffect(() => {
@@ -157,7 +157,7 @@ export default function Dashboard() {
       const n = [...prev, { timestamp: now, value: val }]
       return n.length > 100 ? n.slice(-100) : n
     })
-  }, [data])
+  }, [data, activeSignal])
 
   useEffect(() => {
     function fetchLog() {
