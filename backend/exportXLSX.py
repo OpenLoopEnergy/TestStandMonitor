@@ -188,7 +188,7 @@ def process_csv_to_excel_from_file(file_path):
                 first_row, chart_last = offset + 2, len(df) + offset + 1
                 def time_cats(): return f"=Data!${B_letter}${first_row}:${B_letter}${chart_last}"
 
-                # 1. PRIMARY Chart (Pressure Areas & LC Line on Left Axis)
+                # 1. PRIMARY Chart (Pressure Areas)
                 chart = workbook.add_chart({"type": "area"})
 
                 # P5 Background
@@ -204,19 +204,17 @@ def process_csv_to_excel_from_file(file_path):
                     "fill": {"color": C_PRESS_P1, "transparency": 20}, "border": {"none": True},
                 })
 
-                # LC Setpoint (Combined as a Line on the Left Axis)
+                # 2. LC Setpoint (Line on Left Axis) - FIXED INDENTATION
                 if H_lc_letter:
                     lc_line = workbook.add_chart({"type": "line"})
                     lc_line.add_series({
                         "name": "LC Setpoint", "categories": time_cats(),
                         "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
                         "line": {"color": C_AMBER, "width": 2, "dash_type": "dash"},
-                        "visible": True, "y_axis": True,
                     })
-                chart.combine(lc_line)
+                    chart.combine(lc_line) # Must be inside the 'if' block
 
-                # 2. SECONDARY Chart (Efficiency as Columns on Right Axis)
-                # This fixes the scaling and the "connecting across gaps" issue
+                # 3. SECONDARY Chart (Efficiency as Translucent Columns)
                 eff_col_chart = workbook.add_chart({"type": "column"})
 
                 # Efficiency A (F1)
@@ -224,7 +222,7 @@ def process_csv_to_excel_from_file(file_path):
                 eff_col_chart.add_series({
                     "name": "Fwd Efficiency (F1)",
                     "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
-                    "fill": {"color": C_EFF_FWD, "transparency": 60},
+                    "fill": {"color": C_EFF_FWD, "transparency": 75}, # Increased transparency
                     "y2_axis": True,
                 })
                 # Efficiency B (F3)
@@ -232,24 +230,24 @@ def process_csv_to_excel_from_file(file_path):
                 eff_col_chart.add_series({
                     "name": "Rev Efficiency (F3)",
                     "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
-                    "fill": {"color": C_EFF_REV, "transparency": 60},
+                    "fill": {"color": C_EFF_REV, "transparency": 75},
                     "y2_axis": True,
                 })
                 chart.combine(eff_col_chart)
 
-                # 3. DARK THEME & AXIS STYLING (Applied to the main object)
+                # 4. THEME & AXIS STYLING
                 chart.set_chartarea({"fill": {"color": C_BLACK}, "border": {"none": True}})
                 chart.set_plotarea( {"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
                 chart.set_title({"name": "Open Loop Pump Test Profile", "name_font": {"color": C_RED, "size": 16, "bold": True}})
 
-                # Bottom Axis
+                # X Axis
                 chart.set_x_axis({
                     "name": "Time Index",
                     "name_font": {"color": C_WHITE}, "num_font": {"color": C_WHITE},
                     "line": {"color": C_WHITE}
                 })
 
-                # LEFT Axis (PSI)
+                # Y Axis (Primary - PSI)
                 chart.set_y_axis({
                     "name": "Pressure (PSI)",
                     "name_font": {"color": C_WHITE}, "num_font": {"color": C_WHITE},
@@ -258,14 +256,15 @@ def process_csv_to_excel_from_file(file_path):
                     "line": {"color": C_WHITE}
                 })
 
-                # RIGHT Axis (Efficiency %)
-                # Explicitly setting the y2 axis properties on the main chart forces the white labels
+                # Y2 Axis (Secondary - Efficiency) - FIXED VISIBILITY & COLOR
                 chart.set_y2_axis({
                     "name": "Efficiency %",
-                    "name_font": {"color": C_WHITE_Y2}, "num_font":  {"color": C_WHITE_Y2},
+                    "name_font": {"color": C_WHITE}, # Standard C_WHITE is safer
+                    "num_font":  {"color": C_WHITE},
+                    "line":      {"color": C_WHITE},
                     "min": 0, "max": 1.1, "major_unit": 0.2,
-                    "num_format": "0%", "line": {"color": C_WHITE_Y2},
-                    "visible": True
+                    "num_format": "0%",
+                    "visible": True, # Required to show the axis
                 })
 
                 chart.set_legend({"position": "bottom", "font": {"color": C_WHITE}})
