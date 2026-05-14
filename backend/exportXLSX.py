@@ -124,12 +124,12 @@ def process_csv_to_excel_from_file(file_path):
             # Efficiency A: Show Sensor 1 (F1) when Reversed is 1
             def eff_a_formula(row):
                 rn = row.name + offset + 2
-                return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=1,${W1_L}{rn}>=0.1),${W1_L}{rn},NA())'
+                return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=0,${W1_L}{rn}>=0.1),${W1_L}{rn},NA())'
 
             # Efficiency B: Show Sensor 3 (F3) when Reversed is 0
             def eff_b_formula(row):
                 rn = row.name + offset + 2
-                return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=0,${W3_L}{rn}>=0.1),${W3_L}{rn},NA())'
+                return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=1,${W3_L}{rn}>=0.1),${W3_L}{rn},NA())'
 
             df["Efficiency A"] = df.apply(eff_a_formula, axis=1)
             df["Efficiency B"] = df.apply(eff_b_formula, axis=1)
