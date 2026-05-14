@@ -15,7 +15,7 @@ const Y_MAX: Record<ChartSignal, number> = {
   F1: 200, F2: 32, F3: 200,
   T1: 200, T3: 200,
   P1: 6000, P2: 600, P3: 1000, P4: 100, P5: 6000,
-  TheoFlow: 100, Efficiency: 110,
+  TheoFlow: 100, EfficiencyA: 110, EfficiencyB: 110,
 }
 
 // Minimal shape we mutate on the Chart.js options objects

@@ -89,4 +89,4 @@ export type ChartSignal =
   | 'F1' | 'F2' | 'F3'
   | 'T1' | 'T3'
   | 'P1' | 'P2' | 'P3' | 'P4' | 'P5'
-  | 'TheoFlow' | 'Efficiency'
+  | 'TheoFlow' | 'EfficiencyA' | 'EfficiencyB'

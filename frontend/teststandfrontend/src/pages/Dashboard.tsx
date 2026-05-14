@@ -7,7 +7,7 @@ import { HeaderInfoPanel } from '../components/HeaderInfoPanel'
 import { ThemeToggle } from '../components/ThemeToggle'
 import type { ChartSignal, LiveData, LogRow, SignalPoint } from '../types/signals'
 
-const COMPUTED_SIGNALS: ChartSignal[] = ['TheoFlow', 'Efficiency']
+const COMPUTED_SIGNALS: ChartSignal[] = ['TheoFlow', 'EfficiencyA', 'EfficiencyB']
 const AUTO_CLEAR_SECONDS = 15
 
 function getLiveValue(signal: ChartSignal, d: LiveData): number | null {
@@ -35,7 +35,8 @@ export default function Dashboard() {
   const [activeSignal, setActiveSignal] = useState<ChartSignal>('S1')
   const [historyPoints, setHistoryPoints] = useState<SignalPoint[]>([])
   const [theoFlowHistory, setTheoFlowHistory] = useState<SignalPoint[]>([])
-  const [efficiencyHistory, setEfficiencyHistory] = useState<SignalPoint[]>([])
+  const [efficiencyAHistory, setEfficiencyAHistory] = useState<SignalPoint[]>([])
+  const [efficiencyBHistory, setEfficiencyBHistory] = useState<SignalPoint[]>([])
   const [logRows, setLogRows] = useState<LogRow[]>([])
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
   const [isExporting, setIsExporting] = useState(false)
@@ -57,8 +58,10 @@ export default function Dashboard() {
 
 
   const f1 = data.f1 * 0.01
+  const f3 = data.f3 * 0.01
   const theoFlow = inputFactor > 0 ? (data.s1 * inputFactor) / 231 : 0
-  const efficiency = theoFlow > 0 ? (f1 / theoFlow) * 100 : 0
+  const efficiencyA = theoFlow > 0 ? (f1 / theoFlow) * 100 : 0
+  const efficiencyB = theoFlow > 0 ? (f3 / theoFlow) * 100 : 0
   const tp_pct = `${Math.floor(data.tp / 10.23)}%`
 
   const showToast = useCallback((type: 'success' | 'error', msg: string) => {
@@ -138,9 +141,10 @@ export default function Dashboard() {
   useEffect(() => {
     const now = new Date().toISOString()
     const max = 100
-    setTheoFlowHistory(prev => { const n = [...prev, { timestamp: now, value: theoFlow }]; return n.length > max ? n.slice(-max) : n })
-    setEfficiencyHistory(prev => { const n = [...prev, { timestamp: now, value: efficiency }]; return n.length > max ? n.slice(-max) : n })
-  }, [data, efficiency, theoFlow])
+    setTheoFlowHistory(prev =>  { const n = [...prev, { timestamp: now, value: theoFlow   }]; return n.length > max ? n.slice(-max) : n })
+    setEfficiencyAHistory(prev => { const n = [...prev, { timestamp: now, value: efficiencyA }]; return n.length > max ? n.slice(-max) : n })
+    setEfficiencyBHistory(prev => { const n = [...prev, { timestamp: now, value: efficiencyB }]; return n.length > max ? n.slice(-max) : n })
+  }, [data, efficiencyA, efficiencyB, theoFlow])
 
   // Clear history when switching to a non-computed signal
   useEffect(() => {
@@ -202,7 +206,8 @@ export default function Dashboard() {
 
   function signalHistory(): SignalPoint[] {
     if (activeSignal === 'TheoFlow') return theoFlowHistory
-    if (activeSignal === 'Efficiency') return efficiencyHistory
+    if (activeSignal === 'EfficiencyA') return efficiencyAHistory
+    if (activeSignal === 'EfficiencyB') return efficiencyBHistory
     return historyPoints
   }
 
@@ -360,7 +365,8 @@ export default function Dashboard() {
                 ['P4',         `${data.p4} PSI`],
                 ['P5',         `${data.p5} PSI`],
                 ['TheoFlow',   `${theoFlow.toFixed(2)} GPM`],
-                ['Efficiency', `${efficiency.toFixed(2)} %`],
+                ['EfficiencyA', `${efficiencyA.toFixed(2)} %`],
+                ['EfficiencyB', `${efficiencyB.toFixed(2)} %`],
               ] as [ChartSignal, string][]).map(([sig, val], i, arr) => (
                 <SignalCard
                   key={sig}
