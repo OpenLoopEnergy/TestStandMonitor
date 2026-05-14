@@ -122,23 +122,35 @@ def process_csv_to_excel_from_file(file_path):
 
         # 3. Efficiency A (Fwd/F3) and B (Rev/F1)
         if U_letter and T_trend_letter:
+            # Efficiency A: Show EffRaw_F1 when TP Reversed is 1
             def eff_a_formula(row):
                 rn = row.name + offset + 2
-                prev = rn - 1 if row.name > 0 else rn
-                return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=0,${U_letter}{prev}=0)),${W3_L}{rn},NA())'
+                return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=1),${W1_L}{rn},NA())'
 
+            # Efficiency B: Show EffRaw_F3 when TP Reversed is 0
             def eff_b_formula(row):
                 rn = row.name + offset + 2
-                prev = rn - 1 if row.name > 0 else rn
-                return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=1,${U_letter}{prev}=1)),${W1_L}{rn},NA())'
+                return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=0),${W3_L}{rn},NA())'
 
             df["Efficiency A"] = df.apply(eff_a_formula, axis=1)
             df["Efficiency B"] = df.apply(eff_b_formula, axis=1)
+            
+            # 4. Average Efficiency Calculation
+            col_a_let = column_letter(df.columns.get_loc("Efficiency A"))
+            col_b_let = column_letter(df.columns.get_loc("Efficiency B"))
+            
+            def eff_avg_formula(row):
+                rn = row.name + offset + 2
+                # Excel's AVERAGE function ignores NA values automatically
+                return f'=IFERROR(AVERAGE(${col_a_let}{rn},${col_b_let}{rn}),NA())'
+            
+            df["Average Efficiency"] = df.apply(eff_avg_formula, axis=1)
 
         # --- Excel Export ---
         timestamp = get_export_now().strftime("%m-%d-%Y_%I-%M-%S_%p")
         excel_file = os.path.join(os.path.dirname(file_path), f"TestResults_{timestamp}.xlsx")
-        FORMULA_COLS = {"Theo Flow", "EffRaw_F1", "EffRaw_F3", "Efficiency A", "Efficiency B"}
+        # Removed this 2026-05-14 at ~14:30
+	#FORMULA_COLS = {"Theo Flow", "EffRaw_F1", "EffRaw_F3", "Efficiency A", "Efficiency B"}
 
         with pd.ExcelWriter(excel_file, engine="xlsxwriter") as writer:
             pd.DataFrame(metadata).to_excel(writer, index=False, sheet_name="Data", header=False)
@@ -165,11 +177,12 @@ def process_csv_to_excel_from_file(file_path):
             for col_idx, col_name in enumerate(df.columns):
                 max_data_len = df_str[col_name].map(len).max() if len(df) > 0 else 0
                 col_width = max(len(col_name), max_data_len) + 2
-                if col_idx == 0: col_width = max(col_width, max((len(str(r[0])) for r in metadata if r), default=0) + 2)
+	        # Removed this 2026-05-14 at ~14:30                
+		#if col_idx == 0: col_width = max(col_width, max((len(str(r[0])) for r in metadata if r), default=0) + 2)
                 worksheet.set_column(col_idx, col_idx, min(col_width, 40))
 
             # Apply percent formatting
-            for col in ["EffRaw_F1", "EffRaw_F3", "Efficiency A", "Efficiency B"]:
+            for col in ["EffRaw_F1", "EffRaw_F3", "Efficiency A", "Efficiency B", "Average Efficiency"]:
                 if col in df.columns:
                     idx = df.columns.get_loc(col)
                     worksheet.set_column(idx, idx, 14, percent_fmt)
@@ -188,46 +201,49 @@ def process_csv_to_excel_from_file(file_path):
                 first_row, chart_last = offset + 2, len(df) + offset + 1
                 def time_cats(): return f"=Data!${B_letter}${first_row}:${B_letter}${chart_last}"
 
-                # 1. BASE Chart: Efficiency Columns on PRIMARY (left) axis = %
-                # XlsxWriter's secondary-axis support requires the BASE chart to hold
-                # the primary series. Column (efficiency) as base + Area (pressure) as
-                # combined is the pattern that reliably renders both labelled axes.
-                col_ea = column_letter(df.columns.get_loc("Efficiency A"))
-                col_eb = column_letter(df.columns.get_loc("Efficiency B"))
-
+                # 1. BASE Chart: Efficiency Columns (Left Axis)
                 chart = workbook.add_chart({"type": "column"})
+                
+                # Fwd Efficiency
+                col_ea = column_letter(df.columns.get_loc("Efficiency A"))
                 chart.add_series({
-                    "name": "Fwd Efficiency (F3)",
-                    "categories": time_cats(),
+                    "name": "Fwd Efficiency (F1)", "categories": time_cats(),
                     "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
-                    "fill": {"color": C_EFF_FWD, "transparency": 20},
-                    "border": {"none": True},
+                    "fill": {"color": C_EFF_FWD, "transparency": 30}, "border": {"none": True},
                 })
+                # Rev Efficiency
+                col_eb = column_letter(df.columns.get_loc("Efficiency B"))
                 chart.add_series({
-                    "name": "Rev Efficiency (F1)",
-                    "categories": time_cats(),
+                    "name": "Rev Efficiency (F3)", "categories": time_cats(),
                     "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
-                    "fill": {"color": C_EFF_REV, "transparency": 20},
-                    "border": {"none": True},
+                    "fill": {"color": C_EFF_REV, "transparency": 30}, "border": {"none": True},
                 })
 
-                # 2. COMBINED Chart: Pressure Areas + LC Setpoint on SECONDARY (right) axis = PSI
-                # Colored border on each area series keeps them visible when overlapping.
+                # 2. ADD AVERAGE EFFICIENCY LINE (STILL ON LEFT AXIS)
+                col_avg = column_letter(df.columns.get_loc("Average Efficiency"))
+                avg_line_chart = workbook.add_chart({"type": "line"})
+                avg_line_chart.add_series({
+                    "name": "Average Efficiency", "categories": time_cats(),
+                    "values": f"=Data!${col_avg}${first_row}:${col_avg}${chart_last}",
+                    "line": {"color": C_WHITE, "width": 2},
+                })
+                chart.combine(avg_line_chart)
+
+                # 3. COMBINED Chart: Pressure Areas (Right Axis)
                 pressure_chart = workbook.add_chart({"type": "area"})
                 pressure_chart.add_series({
                     "name": "P5 Pressure", "categories": time_cats(),
                     "values": f"=Data!${P5_letter}${first_row}:${P5_letter}${chart_last}",
-                    "fill": {"color": C_PRESS_P5, "transparency": 50},
-                    "border": {"color": C_PRESS_P5, "width": 1},
-                    "y2_axis": True,
+                    "fill": {"color": C_PRESS_P5, "transparency": 60},
+                    "border": {"color": C_PRESS_P5, "width": 1}, "y2_axis": True,
                 })
                 pressure_chart.add_series({
                     "name": "P1 Pressure", "categories": time_cats(),
                     "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${chart_last}",
-                    "fill": {"color": C_PRESS_P1, "transparency": 50},
-                    "border": {"color": C_PRESS_P1, "width": 1},
-                    "y2_axis": True,
+                    "fill": {"color": C_PRESS_P1, "transparency": 60},
+                    "border": {"color": C_PRESS_P1, "width": 1}, "y2_axis": True,
                 })
+                
                 if H_lc_letter:
                     pressure_chart.add_series({
                         "name": "LC Setpoint", "categories": time_cats(),
@@ -238,41 +254,34 @@ def process_csv_to_excel_from_file(file_path):
                     })
                 chart.combine(pressure_chart)
 
-                # 3. THEME & AXIS STYLING
+                # 4. THEME & AXIS STYLING
                 chart.set_chartarea({"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
                 chart.set_plotarea( {"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
                 chart.set_title({"name": "Open Loop Pump Test Profile", "name_font": {"color": C_RED, "size": 16, "bold": True}})
 
                 # X Axis
                 chart.set_x_axis({
-                    "name": "Time",
-                    "name_font": {"color": C_WHITE}, "num_font": {"color": C_WHITE},
-                    "line": {"color": C_WHITE}
+                    "name": "Time", "name_font": {"color": C_WHITE}, 
+                    "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE}
                 })
 
-                # Y Axis (Primary LEFT — Efficiency %)
+                # Y Axis (Left - Efficiency)
                 chart.set_y_axis({
-                    "name": "Efficiency %",
-                    "name_font": {"color": C_WHITE}, "num_font": {"color": C_WHITE},
-                    "min": 0, "max": 1.1, "major_unit": 0.2,
-                    "num_format": "0%",
+                    "name": "Efficiency %", "name_font": {"color": C_WHITE}, 
+                    "num_font": {"color": C_WHITE}, "min": 0, "max": 1.1, 
+                    "major_unit": 0.2, "num_format": "0%",
                     "major_gridlines": {"visible": True, "line": {"color": C_GRIDLINE}},
                     "line": {"color": C_WHITE},
                 })
 
-                # Y2 Axis (Secondary RIGHT — Pressure PSI)
-                # Must be set on BOTH the main chart and the combined sub-chart:
-                # XlsxWriter renders the axis from the sub-chart's own definition,
-                # so without pressure_chart.set_y2_axis() the labels stay black.
-                _y2_cfg = {
-                    "name": "Pressure (PSI)",
-                    "name_font": {"color": C_WHITE},
-                    "num_font":  {"color": C_WHITE},
-                    "line":      {"color": C_WHITE},
+                # Y2 Axis (Right - Pressure)
+                y2_cfg = {
+                    "name": "Pressure (PSI)", "name_font": {"color": C_WHITE},
+                    "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE},
                     "min": 0, "max": 3500,
                 }
-                chart.set_y2_axis(_y2_cfg)
-                pressure_chart.set_y2_axis(_y2_cfg)
+                chart.set_y2_axis(y2_cfg)
+                pressure_chart.set_y2_axis(y2_cfg)
 
                 chart.set_legend({"position": "bottom", "font": {"color": C_WHITE}})
                 chartsheet = workbook.add_chartsheet("Report Chart")
