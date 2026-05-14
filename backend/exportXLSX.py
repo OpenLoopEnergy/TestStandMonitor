@@ -18,7 +18,7 @@ C_CHARCOAL    = '#2E3E4D'
 C_AMBER       = '#ECA400'   # LC Setpoint Target
 
 C_PRESS_P1    = '#4472C4'   # Office Blue
-C_PRESS_P5    = '#1B6B8A'   # Teal
+C_PRESS_P5    = '#00BCD4'   # Bright Cyan-Teal (clearly distinct from P1 blue)
 C_EFF_FWD     = '#C0C0C0'   # Silver Gray (Forward - Sensor 1)
 C_EFF_REV     = '#EB1C23'   # Logo Red (Reverse - Sensor 3)
 
@@ -261,13 +261,18 @@ def process_csv_to_excel_from_file(file_path):
                 })
 
                 # Y2 Axis (Secondary RIGHT — Pressure PSI)
-                chart.set_y2_axis({
+                # Must be set on BOTH the main chart and the combined sub-chart:
+                # XlsxWriter renders the axis from the sub-chart's own definition,
+                # so without pressure_chart.set_y2_axis() the labels stay black.
+                _y2_cfg = {
                     "name": "Pressure (PSI)",
                     "name_font": {"color": C_WHITE},
                     "num_font":  {"color": C_WHITE},
                     "line":      {"color": C_WHITE},
                     "min": 0, "max": 3500,
-                })
+                }
+                chart.set_y2_axis(_y2_cfg)
+                pressure_chart.set_y2_axis(_y2_cfg)
 
                 chart.set_legend({"position": "bottom", "font": {"color": C_WHITE}})
                 chartsheet = workbook.add_chartsheet("Report Chart")
