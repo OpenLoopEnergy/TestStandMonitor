@@ -188,36 +188,37 @@ def process_csv_to_excel_from_file(file_path):
                 first_row, chart_last = offset + 2, len(df) + offset + 1
                 def time_cats(): return f"=Data!${B_letter}${first_row}:${B_letter}${chart_last}"
 
-                # 1. PRIMARY Chart (Pressure Areas)
+                # 1. PRIMARY Chart (Pressure Areas + LC Setpoint)
+                # XlsxWriter only supports ONE combine() call, so LC Setpoint lives
+                # here as a no-fill area series — renders as just a dashed line.
                 chart = workbook.add_chart({"type": "area"})
 
                 # P5 Background
                 chart.add_series({
                     "name": "P5 Pressure", "categories": time_cats(),
                     "values": f"=Data!${P5_letter}${first_row}:${P5_letter}${chart_last}",
-                    "fill": {"color": C_PRESS_P5, "transparency": 50}, "border": {"none": True},
+                    "fill": {"color": C_PRESS_P5, "transparency": 70}, "border": {"none": True},
                 })
                 # P1 Background
                 chart.add_series({
                     "name": "P1 Pressure", "categories": time_cats(),
                     "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${chart_last}",
-                    "fill": {"color": C_PRESS_P1, "transparency": 50}, "border": {"none": True},
+                    "fill": {"color": C_PRESS_P1, "transparency": 70}, "border": {"none": True},
                 })
 
-                # 2. LC Setpoint (Line on Left Axis) - FIXED INDENTATION
+                # LC Setpoint — no fill, dashed amber line on PSI (primary) axis
                 if H_lc_letter:
-                    lc_line = workbook.add_chart({"type": "line"})
-                    lc_line.add_series({
+                    chart.add_series({
                         "name": "LC Setpoint", "categories": time_cats(),
                         "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
+                        "fill": {"none": True},
                         "line": {"color": C_AMBER, "width": 2, "dash_type": "dash"},
                     })
-                    chart.combine(lc_line) # Must be inside the 'if' block
 
-                # 3. SECONDARY Chart (Efficiency as Translucent Columns)
+                # 2. SECONDARY Chart (Efficiency Columns on right / % axis)
+                # This is the only combine() call — required for y2_axis to work.
                 eff_col_chart = workbook.add_chart({"type": "column"})
 
-                # Efficiency A (F1)
                 col_ea = column_letter(df.columns.get_loc("Efficiency A"))
                 eff_col_chart.add_series({
                     "name": "Fwd Efficiency",
@@ -227,7 +228,6 @@ def process_csv_to_excel_from_file(file_path):
                     "border": {"none": True},
                     "y2_axis": True,
                 })
-                # Efficiency B (F3)
                 col_eb = column_letter(df.columns.get_loc("Efficiency B"))
                 eff_col_chart.add_series({
                     "name": "Rev Efficiency",
