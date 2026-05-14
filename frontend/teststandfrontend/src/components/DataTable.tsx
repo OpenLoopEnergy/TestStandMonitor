@@ -37,8 +37,8 @@ export function DataTable({ rows, inputFactor }: Props) {
             const f3Raw = row.F3 ?? 0
             const f3 = f3Raw * 0.01
             const theoFlow = inputFactor > 0 ? (s1 * inputFactor) / 231 : 0
-            const effa = theoFlow > 0 ? (f1 / theoFlow) * 100 : 0
-            const effb = theoFlow > 0 ? (f3 / theoFlow) * 100 : 0
+            const effa = theoFlow > 0 ? (f3 / theoFlow) * 100 : 0  // A = F3 forward
+            const effb = theoFlow > 0 ? (f1 / theoFlow) * 100 : 0  // B = F1 reverse
 
             return (
               <tr key={i} className="border-b border-black/5 hover:bg-black/5 transition-colors dark:border-white/5 dark:hover:bg-white/5">

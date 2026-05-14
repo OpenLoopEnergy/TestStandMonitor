@@ -19,7 +19,7 @@ C_AMBER       = '#ECA400'   # LC Setpoint Target
 
 C_PRESS_P1    = '#4472C4'   # Office Blue
 C_PRESS_P5    = '#1B6B8A'   # Teal
-C_EFF_FWD     = '#00FFFF'   # Bright Cyan (Forward - Sensor 1)
+C_EFF_FWD     = '#C0C0C0'   # Silver Gray (Forward - Sensor 1)
 C_EFF_REV     = '#EB1C23'   # Logo Red (Reverse - Sensor 3)
 
 C_BORDER_DARK = '#1A2733'   # Header borders
@@ -120,17 +120,17 @@ def process_csv_to_excel_from_file(file_path):
         W1_L = column_letter(df.columns.get_loc("EffRaw_F1"))
         W3_L = column_letter(df.columns.get_loc("EffRaw_F3"))
 
-        # 3. Efficiency A (Fwd/F1) and B (Rev/F3)
+        # 3. Efficiency A (Fwd/F3) and B (Rev/F1)
         if U_letter and T_trend_letter:
             def eff_a_formula(row):
                 rn = row.name + offset + 2
                 prev = rn - 1 if row.name > 0 else rn
-                return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=1,${U_letter}{prev}=1)),${W1_L}{rn},NA())'
+                return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=0,${U_letter}{prev}=0)),${W3_L}{rn},NA())'
 
             def eff_b_formula(row):
                 rn = row.name + offset + 2
                 prev = rn - 1 if row.name > 0 else rn
-                return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=0,${U_letter}{prev}=0)),${W3_L}{rn},NA())'
+                return f'=IF(AND(${T_trend_letter}{rn}=1,OR(${U_letter}{rn}=1,${U_letter}{prev}=1)),${W1_L}{rn},NA())'
 
             df["Efficiency A"] = df.apply(eff_a_formula, axis=1)
             df["Efficiency B"] = df.apply(eff_b_formula, axis=1)
@@ -195,13 +195,13 @@ def process_csv_to_excel_from_file(file_path):
                 chart.add_series({
                     "name": "P5 Pressure", "categories": time_cats(),
                     "values": f"=Data!${P5_letter}${first_row}:${P5_letter}${chart_last}",
-                    "fill": {"color": C_PRESS_P5, "transparency": 20}, "border": {"none": True},
+                    "fill": {"color": C_PRESS_P5, "transparency": 50}, "border": {"none": True},
                 })
                 # P1 Background
                 chart.add_series({
                     "name": "P1 Pressure", "categories": time_cats(),
                     "values": f"=Data!${P1_letter}${first_row}:${P1_letter}${chart_last}",
-                    "fill": {"color": C_PRESS_P1, "transparency": 20}, "border": {"none": True},
+                    "fill": {"color": C_PRESS_P1, "transparency": 50}, "border": {"none": True},
                 })
 
                 # 2. LC Setpoint (Line on Left Axis) - FIXED INDENTATION
@@ -220,17 +220,21 @@ def process_csv_to_excel_from_file(file_path):
                 # Efficiency A (F1)
                 col_ea = column_letter(df.columns.get_loc("Efficiency A"))
                 eff_col_chart.add_series({
-                    "name": "Fwd Efficiency (F1)",
+                    "name": "Fwd Efficiency",
+                    "categories": time_cats(),
                     "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
-                    "fill": {"color": C_EFF_FWD, "transparency": 75}, # Increased transparency
+                    "fill": {"color": C_EFF_FWD, "transparency": 20},
+                    "border": {"none": True},
                     "y2_axis": True,
                 })
                 # Efficiency B (F3)
                 col_eb = column_letter(df.columns.get_loc("Efficiency B"))
                 eff_col_chart.add_series({
-                    "name": "Rev Efficiency (F3)",
+                    "name": "Rev Efficiency",
+                    "categories": time_cats(),
                     "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
-                    "fill": {"color": C_EFF_REV, "transparency": 75},
+                    "fill": {"color": C_EFF_REV, "transparency": 20},
+                    "border": {"none": True},
                     "y2_axis": True,
                 })
                 chart.combine(eff_col_chart)
@@ -242,7 +246,7 @@ def process_csv_to_excel_from_file(file_path):
 
                 # X Axis
                 chart.set_x_axis({
-                    "name": "Time Index",
+                    "name": "Time",
                     "name_font": {"color": C_WHITE}, "num_font": {"color": C_WHITE},
                     "line": {"color": C_WHITE}
                 })

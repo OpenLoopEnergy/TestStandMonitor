@@ -60,8 +60,8 @@ export default function Dashboard() {
   const f1 = data.f1 * 0.01
   const f3 = data.f3 * 0.01
   const theoFlow = inputFactor > 0 ? (data.s1 * inputFactor) / 231 : 0
-  const efficiencyA = theoFlow > 0 ? (f1 / theoFlow) * 100 : 0
-  const efficiencyB = theoFlow > 0 ? (f3 / theoFlow) * 100 : 0
+  const efficiencyA = theoFlow > 0 ? (f3 / theoFlow) * 100 : 0  // A = F3 forward
+  const efficiencyB = theoFlow > 0 ? (f1 / theoFlow) * 100 : 0  // B = F1 reverse
   const tp_pct = `${Math.floor(data.tp / 10.23)}%`
 
   const showToast = useCallback((type: 'success' | 'error', msg: string) => {
