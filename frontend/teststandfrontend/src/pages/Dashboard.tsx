@@ -16,8 +16,8 @@ function getLiveValue(signal: ChartSignal, d: LiveData): number | null {
     case 'SP': return d.sp
     case 'TP': return d.tp / 10.23
     case 'F1': return d.f1 * 0.01
-    case 'F2': return d.f2 * 0.01
-    case 'F3': return d.f3 * 0.001
+    case 'F2': return d.f2 * 0.001
+    case 'F3': return d.f3 * 0.01
     case 'T1': return d.t1 * 0.1
     case 'T3': return d.t3 * 0.1
     case 'P1': return d.p1
