@@ -103,7 +103,7 @@ def process_csv_to_excel_from_file(file_path):
         df["Theo Flow"] = df.apply(calculate_theo_flow, axis=1)
         FTheo_L = column_letter(df.columns.get_loc("Theo Flow"))
 
-        # 2. Raw Efficiencies (No low-flow filter here)
+        # 2. Raw Efficiencies (Show everything)
         def raw_eff_f1(row):
             rn = row.name + offset + 2
             expr = f"{F1_letter}{rn}/{FTheo_L}{rn}"
@@ -119,22 +119,22 @@ def process_csv_to_excel_from_file(file_path):
         W1_L = column_letter(df.columns.get_loc("EffRaw_F1"))
         W3_L = column_letter(df.columns.get_loc("EffRaw_F3"))
 
-        # 3. Efficiency A & B (Corrected Directional Logic based on your instruction)
+        # 3. Efficiency A & B (Corrected Directional Logic)
         if U_letter and T_trend_letter:
-            # Efficiency A: Show Sensor 3 (F3) when Reversed is 0
+            # Efficiency A: Sensor 1 (F1) when Reversed is 0 (Forward)
             def eff_a_formula(row):
                 rn = row.name + offset + 2
-                return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=0,${W3_L}{rn}>=0.1),${W3_L}{rn},NA())'
+                return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=0,${W1_L}{rn}>=0.1),${W1_L}{rn},NA())'
 
-            # Efficiency B: Show Sensor 1 (F1) when Reversed is 1
+            # Efficiency B: Sensor 3 (F3) when Reversed is 1 (Reverse)
             def eff_b_formula(row):
                 rn = row.name + offset + 2
-                return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=1,${W1_L}{rn}>=0.1),${W1_L}{rn},NA())'
+                return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=1,${W3_L}{rn}>=0.1),${W3_L}{rn},NA())'
 
             df["Efficiency A"] = df.apply(eff_a_formula, axis=1)
             df["Efficiency B"] = df.apply(eff_b_formula, axis=1)
             
-            # 4. Average Efficiency (Calculated from Raw Sources for a continuous line)
+            # 4. Average Efficiency (True average of raw sensors)
             def eff_avg_formula(row):
                 rn = row.name + offset + 2
                 return f'=IFERROR(AVERAGE(${W1_L}{rn},${W3_L}{rn}),NA())'
@@ -195,30 +195,30 @@ def process_csv_to_excel_from_file(file_path):
                 # 1. BASE Chart (Efficiency Columns)
                 chart = workbook.add_chart({"type": "column"})
                 
-                # Efficiency A (F3/Rev) - Red
+                # Efficiency A (F1/Fwd) - Silver Gray
                 col_ea = column_letter(df.columns.get_loc("Efficiency A"))
                 chart.add_series({
-                    "name": "Rev Efficiency (F3)", "categories": time_cats(),
-                    "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
-                    "fill": {"color": C_EFF_REV, "transparency": 35}, "border": {"none": True},
-                })
-                # Efficiency B (F1/Fwd) - Silver Gray
-                col_eb = column_letter(df.columns.get_loc("Efficiency B"))
-                chart.add_series({
                     "name": "Fwd Efficiency (F1)", "categories": time_cats(),
-                    "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
+                    "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
                     "fill": {"color": C_EFF_FWD, "transparency": 35}, "border": {"none": True},
                 })
-
-                # 2. ADD AVERAGE LINE directly to the base chart object
-                # This makes it a Line-Column Combo on the Primary Axis
-                col_avg = column_letter(df.columns.get_loc("Average Efficiency"))
+                # Efficiency B (F3/Rev) - Red
+                col_eb = column_letter(df.columns.get_loc("Efficiency B"))
                 chart.add_series({
-                    "name": "Average Efficiency",
+                    "name": "Rev Efficiency (F3)", "categories": time_cats(),
+                    "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
+                    "fill": {"color": C_EFF_REV, "transparency": 35}, "border": {"none": True},
+                })
+
+                # 2. COMBINE AVERAGE LINE (Separate object to force Line type)
+                avg_line_chart = workbook.add_chart({"type": "line"})
+                col_avg = column_letter(df.columns.get_loc("Average Efficiency"))
+                avg_line_chart.add_series({
+                    "name": "Average Efficiency", "categories": time_cats(),
                     "values": f"=Data!${col_avg}${first_row}:${col_avg}${chart_last}",
                     "line": {"color": C_WHITE, "width": 2.25},
-                    "type": "line",
                 })
+                chart.combine(avg_line_chart)
 
                 # 3. COMBINE PRESSURE AREAS (Right Axis)
                 pressure_chart = workbook.add_chart({"type": "area"})
