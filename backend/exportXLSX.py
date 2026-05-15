@@ -103,30 +103,30 @@ def process_csv_to_excel_from_file(file_path):
         df["Theo Flow"] = df.apply(calculate_theo_flow, axis=1)
         FTheo_L = column_letter(df.columns.get_loc("Theo Flow"))
 
-        # 2. Raw Efficiencies (Show everything)
+        # 2. Raw Efficiencies (Fixed Division: Theo/Sensor + Filter > 1)
         def raw_eff_f1(row):
             rn = row.name + offset + 2
-            expr = f"{F1_letter}{rn}/{FTheo_L}{rn}"
-            return f"=IFERROR({expr},NA())"
+            expr = f"{FTheo_L}{rn}/{F1_letter}{rn}"
+            return f"=IFERROR(IF(${F1_letter}{rn}>1, {expr}, NA()), NA())"
 
         def raw_eff_f3(row):
             rn = row.name + offset + 2
-            expr = f"{F3_letter}{rn}/{FTheo_L}{rn}"
-            return f"=IFERROR({expr},NA())"
+            expr = f"{FTheo_L}{rn}/{F3_letter}{rn}"
+            return f"=IFERROR(IF(${F3_letter}{rn}>1, {expr}, NA()), NA())"
 
         df["EffRaw_F1"] = df.apply(raw_eff_f1, axis=1)
         df["EffRaw_F3"] = df.apply(raw_eff_f3, axis=1)
         W1_L = column_letter(df.columns.get_loc("EffRaw_F1"))
         W3_L = column_letter(df.columns.get_loc("EffRaw_F3"))
 
-        # 3. Efficiency A & B (Corrected Directional Logic)
+        # 3. Efficiency A & B (Corrected Directions + Low Flow Filter)
         if U_letter and T_trend_letter:
-            # Efficiency A: Sensor 1 (F1) when Reversed is 0 (Forward)
+            # Efficiency A: Fwd (F1) when Reversed is 0
             def eff_a_formula(row):
                 rn = row.name + offset + 2
                 return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=0,${W1_L}{rn}>=0.1),${W1_L}{rn},NA())'
 
-            # Efficiency B: Sensor 3 (F3) when Reversed is 1 (Reverse)
+            # Efficiency B: Rev (F3) when Reversed is 1
             def eff_b_formula(row):
                 rn = row.name + offset + 2
                 return f'=IF(AND(${T_trend_letter}{rn}=1,${U_letter}{rn}=1,${W3_L}{rn}>=0.1),${W3_L}{rn},NA())'
@@ -134,7 +134,7 @@ def process_csv_to_excel_from_file(file_path):
             df["Efficiency A"] = df.apply(eff_a_formula, axis=1)
             df["Efficiency B"] = df.apply(eff_b_formula, axis=1)
             
-            # 4. Average Efficiency (True average of raw sensors)
+            # 4. Average Efficiency (From Raw sources)
             def eff_avg_formula(row):
                 rn = row.name + offset + 2
                 return f'=IFERROR(AVERAGE(${W1_L}{rn},${W3_L}{rn}),NA())'
@@ -210,7 +210,7 @@ def process_csv_to_excel_from_file(file_path):
                     "fill": {"color": C_EFF_REV, "transparency": 35}, "border": {"none": True},
                 })
 
-                # 2. COMBINE AVERAGE LINE (Separate object to force Line type)
+                # 2. COMBINE AVERAGE LINE (Force as separate line object)
                 avg_line_chart = workbook.add_chart({"type": "line"})
                 col_avg = column_letter(df.columns.get_loc("Average Efficiency"))
                 avg_line_chart.add_series({
