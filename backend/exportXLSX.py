@@ -106,12 +106,12 @@ def process_csv_to_excel_from_file(file_path):
         # 2. Raw Efficiencies (Theo / Sensor + Filter Sensor > 1)
         def raw_eff_f1(row):
             rn = row.name + offset + 2
-            expr = f"{F1_letter}{rn}/{FTheo_L}{rn}"
+            expr = f"{FTheo_L}{rn}/{F1_letter}{rn}"
             return f"=IFERROR(IF(${F1_letter}{rn}>1, {expr}, NA()), NA())"
 
         def raw_eff_f3(row):
             rn = row.name + offset + 2
-            expr = f"{F3_letter}{rn}/{FTheo_L}{rn}"
+            expr = f"{FTheo_L}{rn}/{F3_letter}{rn}"
             return f"=IFERROR(IF(${F3_letter}{rn}>1, {expr}, NA()), NA())"
 
         df["EffRaw_F1"] = df.apply(raw_eff_f1, axis=1)
