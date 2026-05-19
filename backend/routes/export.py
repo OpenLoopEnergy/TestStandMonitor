@@ -147,6 +147,17 @@ async def set_debug_mode(body: DebugModeRequest):
     return {"debug_mode": data_store.debug_mode}
 
 
+class LogManualRequest(BaseModel):
+    enabled: bool
+
+
+@router.post("/set_log_manual")
+async def set_log_manual(body: LogManualRequest):
+    data_store.log_manual = body.enabled
+    await data_store.update({"log_manual": body.enabled})
+    return {"log_manual": data_store.log_manual}
+
+
 @router.post("/clear_data_table")
 def clear_data_table(db: Session = Depends(get_db)):
     try:

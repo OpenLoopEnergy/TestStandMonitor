@@ -3,17 +3,20 @@ import type { LogRow } from '../types/signals'
 interface Props {
   rows: LogRow[]
   inputFactor: number
+  logManual?: boolean
 }
 
 function scale(v: number | null, factor: number) {
   return v == null ? '—' : (v * factor).toFixed(2)
 }
 
-export function DataTable({ rows, inputFactor }: Props) {
+export function DataTable({ rows, inputFactor, logManual }: Props) {
   if (rows.length === 0) {
     return (
       <p className="text-gray-500 text-sm text-center py-6">
-        No data yet — table populates when Trending is active.
+        {logManual
+          ? 'No data yet — table populates when Trending or Manual logging is active.'
+          : 'No data yet — table populates when Trending is active.'}
       </p>
     )
   }

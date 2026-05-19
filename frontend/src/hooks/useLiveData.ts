@@ -10,6 +10,7 @@ const DEFAULT_DATA: LiveData = {
   pb4: 0,
   pi_connected: false,
   debug_mode: false,
+  log_manual: false,
 }
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? `ws://${window.location.host}/ws/frontend`

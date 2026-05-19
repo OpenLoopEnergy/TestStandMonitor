@@ -39,6 +39,7 @@ export interface LiveData {
   efficiency?: number
   pi_connected?: boolean
   debug_mode?: boolean
+  log_manual?: boolean
 }
 
 /** A single historical data point for the signal chart. */

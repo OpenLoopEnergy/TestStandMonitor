@@ -21,6 +21,7 @@ latest: dict[str, Any] = {
     "p1": 0, "p2": 0, "p3": 0, "p4": 0, "p5": 0,
     "pi_connected": False,
     "debug_mode": False,
+    "log_manual": False,
     "tp_reved": 0,
     "m2_tp9a_dir": 0,
     "ee_dir_switch": 0,
@@ -31,6 +32,9 @@ last_pi_frame_at: float = 0.0
 
 # Debug logging mode — when True, logs every tick in Automatic mode regardless of trending
 debug_mode: bool = False
+
+# Log Manual mode — when True, also logs while the machine is in Manual mode (pb4 != 0)
+log_manual: bool = False
 
 # All active frontend WebSocket connections
 frontend_connections: set[Any] = set()

@@ -31,12 +31,18 @@ async def run_logger():
 async def _log_tick():
     snapshot = data_store.latest.copy()
 
+    is_manual = snapshot.get("pb4", 1) != 0
+
     if data_store.debug_mode:
-        # Debug: log whenever in Automatic mode (pb4 == 0)
-        if snapshot.get("pb4", 1) != 0:
+        # Debug: log automatic always; log manual only if log_manual is also on
+        if is_manual and not data_store.log_manual:
+            return
+    elif is_manual:
+        # Manual mode without debug: only log if log_manual flag is set
+        if not data_store.log_manual:
             return
     else:
-        # Normal: only log when trending
+        # Automatic, normal: only log when trending
         if snapshot.get("trending") != 1:
             return
 

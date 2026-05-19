@@ -24,6 +24,7 @@ export default defineConfig({
       '/delete_file': 'http://localhost:8000',
       '/rename_file': 'http://localhost:8000',
       '/set_debug_mode': 'http://localhost:8000',
+      '/set_log_manual': 'http://localhost:8000',
       '/health': 'http://localhost:8000',
       '/ws': {
         target: 'ws://localhost:8000',

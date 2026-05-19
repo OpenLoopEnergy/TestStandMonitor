@@ -48,6 +48,7 @@ export default function Dashboard() {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
   const [isExporting, setIsExporting] = useState(false)
   const [showClearModal, setShowClearModal] = useState(false)
+  const [showLogManualModal, setShowLogManualModal] = useState(false)
   const [countdown, setCountdown] = useState(AUTO_CLEAR_SECONDS)
   const prevPb4 = useRef<number>(1)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -121,6 +122,27 @@ export default function Dashboard() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ enabled: !data.debug_mode }),
+    })
+  }
+
+  async function handleLogManualToggle() {
+    if (!data.log_manual) {
+      setShowLogManualModal(true)
+    } else {
+      await fetch('/set_log_manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: false }),
+      })
+    }
+  }
+
+  async function handleLogManualConfirm() {
+    setShowLogManualModal(false)
+    await fetch('/set_log_manual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: true }),
     })
   }
 
@@ -294,6 +316,40 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* ── Log Manual Confirmation Modal ── */}
+      {isAdmin && showLogManualModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl dark:bg-[#232323] dark:border-white/10">
+            <div className="text-center mb-1 text-xs font-bold uppercase tracking-widest text-teal-600 dark:text-teal-400">
+              Log Manual Mode
+            </div>
+            <h2 className="text-xl font-bold text-center mb-2 text-gray-900 dark:text-white">Enable Manual Logging?</h2>
+            <p className="text-sm text-gray-600 text-center mb-6 dark:text-gray-400">
+              Rows will be logged every{' '}
+              <span className="font-bold text-gray-900 dark:text-white">
+                {data.debug_mode ? '0.5s' : '5s'}
+              </span>{' '}
+              while the machine is in Manual mode. This can fill the table quickly.
+              Clear the table before starting a test to keep results clean.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleLogManualConfirm}
+                className="flex-1 bg-teal-700 hover:bg-teal-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+              >
+                Enable Log Manual
+              </button>
+              <button
+                onClick={() => setShowLogManualModal(false)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 shrink-0 dark:border-white/10">
         <div className="flex items-center gap-4">
@@ -323,6 +379,18 @@ export default function Dashboard() {
               }`}
             >
               {data.debug_mode ? '● Debug' : '○ Debug'}
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              onClick={handleLogManualToggle}
+              className={`cursor-pointer text-sm px-4 py-2 rounded-full font-bold border transition-colors ${
+                data.log_manual
+                  ? 'bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-900/60 dark:text-teal-300 dark:border-teal-700/50'
+                  : 'bg-black/5 text-gray-600 border-black/10 hover:bg-black/10 dark:bg-white/5 dark:text-gray-400 dark:border-white/10 dark:hover:bg-white/10'
+              }`}
+            >
+              {data.log_manual ? '● Log Manual' : '○ Log Manual'}
             </button>
           )}
           {/* Mode — prominent */}
@@ -437,7 +505,11 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-2">
               <div>
                 <h2 className="font-semibold text-xs">Data Table</h2>
-                <p className="text-[10px] text-gray-500">Populates when Trending · last 20 rows</p>
+                <p className="text-[10px] text-gray-500">
+                  {data.log_manual
+                    ? 'Populates when Trending or in Manual mode · last 20 rows'
+                    : 'Populates when Trending · last 20 rows'}
+                </p>
               </div>
               <div className="flex gap-2">
                 <button onClick={handleExport} disabled={isExporting}
@@ -453,7 +525,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="overflow-y-auto max-h-52">
-              <DataTable rows={logRows} inputFactor={inputFactor} />
+              <DataTable rows={logRows} inputFactor={inputFactor} logManual={data.log_manual} />
             </div>
           </div>
         </div>
