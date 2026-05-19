@@ -32,7 +32,6 @@ export function useLiveData() {
   // capturing a stale closure value.
   useEffect(() => {
     connectedRef.current = connected
-    if (!connected) setPiConnected(false)
   }, [connected])
 
   // Poll data freshness every 500 ms to drive the Pi indicator.
