@@ -8,6 +8,13 @@ import { ThemeToggle } from '../components/ThemeToggle'
 import type { ChartSignal, LiveData, LogRow, SignalPoint } from '../types/signals'
 
 const COMPUTED_SIGNALS: ChartSignal[] = ['TheoFlow', 'EfficiencyA', 'EfficiencyB']
+const EFFICIENCY_SIGNALS = new Set<ChartSignal>(['EfficiencyA', 'EfficiencyB'])
+
+function signalDisplayName(s: ChartSignal): string {
+  if (s === 'EfficiencyA') return 'Efficiency A'
+  if (s === 'EfficiencyB') return 'Efficiency B'
+  return s
+}
 const AUTO_CLEAR_SECONDS = 15
 
 function getLiveValue(signal: ChartSignal, d: LiveData): number | null {
@@ -30,9 +37,9 @@ function getLiveValue(signal: ChartSignal, d: LiveData): number | null {
 }
 
 export default function Dashboard() {
-  const { data, connected } = useLiveData()
+  const { data, connected, piConnected } = useLiveData()
   const [inputFactor, setInputFactor] = useState(1.0)
-  const [activeSignal, setActiveSignal] = useState<ChartSignal>('S1')
+  const [activeSignals, setActiveSignals] = useState<ChartSignal[]>(['S1'])
   const [historyPoints, setHistoryPoints] = useState<SignalPoint[]>([])
   const [theoFlowHistory, setTheoFlowHistory] = useState<SignalPoint[]>([])
   const [efficiencyAHistory, setEfficiencyAHistory] = useState<SignalPoint[]>([])
@@ -55,7 +62,28 @@ export default function Dashboard() {
   const logoClickTimes = useRef<number[]>([])
 
   const isAutomatic = data.pb4 === 0
+  const primarySignal = activeSignals[0]
 
+  function handleSignalClick(signal: ChartSignal) {
+    if (!EFFICIENCY_SIGNALS.has(signal)) {
+      setActiveSignals([signal])
+      return
+    }
+    // In efficiency mode already: toggle this signal in/out
+    if (activeSignals.every(s => EFFICIENCY_SIGNALS.has(s))) {
+      if (activeSignals.includes(signal)) {
+        // Don't allow deselecting the last one
+        const remaining = activeSignals.filter(s => s !== signal)
+        if (remaining.length > 0) setActiveSignals(remaining)
+      } else {
+        // Add and keep alphabetical order (A before B)
+        setActiveSignals([...activeSignals, signal].sort() as ChartSignal[])
+      }
+    } else {
+      // Coming from a non-efficiency selection — start fresh
+      setActiveSignals([signal])
+    }
+  }
 
   const f1 = data.f1 * 0.01
   const f3 = data.f3 * 0.01
@@ -109,14 +137,14 @@ export default function Dashboard() {
   // Detect Manual → Automatic transition and show the clear prompt
   // Only trigger once Pi is connected to avoid false positives on page load
   useEffect(() => {
-    if (data.pi_connected && data.pb4 === 0 && prevPb4.current === 1) {
+    if (piConnected && data.pb4 === 0 && prevPb4.current === 1) {
       if (isAdmin) {
         setCountdown(AUTO_CLEAR_SECONDS)
         setShowClearModal(true)
       }
     }
     prevPb4.current = data.pb4
-  }, [data.pb4, data.pi_connected, isAdmin])
+  }, [data.pb4, piConnected, isAdmin])
 
   // Countdown timer when modal is visible
   useEffect(() => {
@@ -146,22 +174,22 @@ export default function Dashboard() {
     setEfficiencyBHistory(prev => { const n = [...prev, { timestamp: now, value: efficiencyB }]; return n.length > max ? n.slice(-max) : n })
   }, [data, efficiencyA, efficiencyB, theoFlow])
 
-  // Clear history when switching to a non-computed signal
+  // Clear accumulated history when switching to a new non-computed signal
   useEffect(() => {
-    if (!COMPUTED_SIGNALS.includes(activeSignal)) setHistoryPoints([])
-  }, [activeSignal])
+    if (!COMPUTED_SIGNALS.includes(primarySignal)) setHistoryPoints([])
+  }, [primarySignal])
 
   // Accumulate live data for non-computed signals (up to 100 points)
   useEffect(() => {
-    if (COMPUTED_SIGNALS.includes(activeSignal)) return
-    const val = getLiveValue(activeSignal, data)
+    if (COMPUTED_SIGNALS.includes(primarySignal)) return
+    const val = getLiveValue(primarySignal, data)
     if (val === null) return
     const now = new Date().toISOString()
     setHistoryPoints(prev => {
       const n = [...prev, { timestamp: now, value: val }]
       return n.length > 100 ? n.slice(-100) : n
     })
-  }, [data, activeSignal])
+  }, [data, primarySignal])
 
   useEffect(() => {
     function fetchLog() {
@@ -205,10 +233,15 @@ export default function Dashboard() {
   }
 
   function signalHistory(): SignalPoint[] {
-    if (activeSignal === 'TheoFlow') return theoFlowHistory
-    if (activeSignal === 'EfficiencyA') return efficiencyAHistory
-    if (activeSignal === 'EfficiencyB') return efficiencyBHistory
+    if (primarySignal === 'TheoFlow') return theoFlowHistory
+    if (primarySignal === 'EfficiencyA') return efficiencyAHistory
+    if (primarySignal === 'EfficiencyB') return efficiencyBHistory
     return historyPoints
+  }
+
+  function signalHistoryB(): SignalPoint[] | undefined {
+    // Only supplied when both efficiency signals are active (signals[1] is always EfficiencyB)
+    return activeSignals.length === 2 ? efficiencyBHistory : undefined
   }
 
   return (
@@ -306,9 +339,9 @@ export default function Dashboard() {
             {connected ? '● Backend' : '○ Backend'}
           </span>
           <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-            data.pi_connected ? 'bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300'
+            piConnected ? 'bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300'
           }`}>
-            {data.pi_connected ? '● Raspberry Pi' : '○ Raspberry Pi'}
+            {piConnected ? '● Raspberry Pi' : '○ Raspberry Pi'}
           </span>
           <span className="text-xs text-gray-500 dark:text-gray-400">
             {data.trending === 1
@@ -370,11 +403,11 @@ export default function Dashboard() {
               ] as [ChartSignal, string][]).map(([sig, val], i, arr) => (
                 <SignalCard
                   key={sig}
-                  label={sig}
+                  label={signalDisplayName(sig)}
                   value={val}
                   signal={sig}
-                  active={activeSignal === sig}
-                  onClick={setActiveSignal}
+                  active={activeSignals.includes(sig)}
+                  onClick={handleSignalClick}
                   className={i === arr.length - 1 && arr.length % 2 !== 0 ? 'col-span-2' : ''}
                 />
               ))}
@@ -387,10 +420,10 @@ export default function Dashboard() {
           {/* Chart */}
           <div className="flex-1 bg-black/5 border border-black/10 rounded-xl p-3 flex flex-col min-h-0 dark:bg-white/5 dark:border-white/10">
             <p className="text-xs text-gray-500 uppercase tracking-widest mb-2 shrink-0 dark:text-white/50">
-              Chart — <span className="text-gray-900 font-semibold dark:text-white">{activeSignal}</span>
+              Chart — <span className="text-gray-900 font-semibold dark:text-white">{activeSignals.map(signalDisplayName).join(' · ')}</span>
             </p>
             <div className="flex-1 min-h-0">
-              <LiveChart signal={activeSignal} liveData={data} historyPoints={signalHistory()} />
+              <LiveChart signals={activeSignals} historyPoints={signalHistory()} historyPointsB={signalHistoryB()} />
             </div>
           </div>
 

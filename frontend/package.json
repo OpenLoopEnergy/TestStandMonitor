@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "type-check": "tsc -b --noEmit",
-    "test": "vitest run",
+    "test": "tsc -b --noEmit && vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {

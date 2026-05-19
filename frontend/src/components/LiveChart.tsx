@@ -6,7 +6,7 @@ import {
   Filler, Tooltip, Legend,
 } from 'chart.js'
 import 'chartjs-adapter-date-fns'
-import type { ChartSignal, LiveData, SignalPoint } from '../types/signals'
+import type { ChartSignal, SignalPoint } from '../types/signals'
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, TimeScale, Filler, Tooltip, Legend)
 
@@ -18,13 +18,25 @@ const Y_MAX: Record<ChartSignal, number> = {
   TheoFlow: 100, EfficiencyA: 110, EfficiencyB: 110,
 }
 
+const SIGNAL_COLOR: Partial<Record<ChartSignal, string>> = {
+  EfficiencyA: '#EB1C23',
+  EfficiencyB: '#3b82f6',
+}
+const DEFAULT_COLOR = '#EB1C23'
+
+function signalDisplayName(s: ChartSignal): string {
+  if (s === 'EfficiencyA') return 'Efficiency A'
+  if (s === 'EfficiencyB') return 'Efficiency B'
+  return s
+}
+
 // Minimal shape we mutate on the Chart.js options objects
 type ScaleOpts = { ticks: { color: string }; grid: { color: string }; max?: number }
 type TooltipOpts = {
   backgroundColor: string; titleColor: string; bodyColor: string
   borderColor: string; borderWidth: number
 }
-type PluginOpts = { legend: { labels: { color: string } }; tooltip: TooltipOpts }
+type PluginOpts = { legend: { display: boolean; labels: { color: string } }; tooltip: TooltipOpts }
 
 function getChartColors() {
   const isDark = document.documentElement.classList.contains('dark')
@@ -57,45 +69,73 @@ function applyChartColors(chart: Chart) {
 }
 
 interface Props {
-  signal: ChartSignal
-  liveData: LiveData
+  signals: ChartSignal[]
   historyPoints: SignalPoint[]
+  historyPointsB?: SignalPoint[]  // only supplied when two efficiency signals are selected
 }
 
-export function LiveChart({ signal, liveData, historyPoints }: Props) {
+export function LiveChart({ signals, historyPoints, historyPointsB }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
 
-  // Create or update chart data
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const labels = historyPoints.map(p => new Date(p.timestamp))
-    const values = historyPoints.map(p => p.value)
+    const isDual = signals.length > 1
+
+    // Rebuild when dataset count changes (single ↔ dual)
+    if (chartRef.current && chartRef.current.data.datasets.length !== signals.length) {
+      chartRef.current.destroy()
+      chartRef.current = null
+    }
+
     const c = getChartColors()
+    const yMax = Math.max(...signals.map(s => Y_MAX[s] ?? 100))
 
     if (!chartRef.current) {
       const ctx = canvas.getContext('2d')!
-      const grad = ctx.createLinearGradient(0, 0, 0, 300)
-      grad.addColorStop(0, 'rgba(235,28,35,0.5)')
-      grad.addColorStop(1, 'rgba(235,28,35,0.02)')
 
-      chartRef.current = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: `${signal} Data`,
+      const datasets = signals.map((sig, i) => {
+        const color = SIGNAL_COLOR[sig] ?? DEFAULT_COLOR
+        const pts = i === 0 ? historyPoints : (historyPointsB ?? [])
+        const values = pts.map(p => p.value)
+
+        if (!isDual) {
+          // Single signal: gradient fill (existing look)
+          const grad = ctx.createLinearGradient(0, 0, 0, 300)
+          grad.addColorStop(0, 'rgba(235,28,35,0.5)')
+          grad.addColorStop(1, 'rgba(235,28,35,0.02)')
+          return {
+            label: signalDisplayName(sig),
             data: values,
-            borderColor: '#EB1C23',
+            borderColor: color,
             backgroundColor: grad,
             borderWidth: 2,
             fill: true,
             pointRadius: 2,
             tension: 0.4,
-          }],
-        },
+          }
+        }
+
+        // Dual signal: solid lines, no fill so they don't obscure each other
+        return {
+          label: signalDisplayName(sig),
+          data: values,
+          borderColor: color,
+          backgroundColor: `${color}1a`,
+          borderWidth: 2,
+          fill: false,
+          pointRadius: 2,
+          tension: 0.4,
+        }
+      })
+
+      const labels = historyPoints.map(p => new Date(p.timestamp))
+
+      chartRef.current = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
         options: {
           animation: false,
           responsive: true,
@@ -109,13 +149,13 @@ export function LiveChart({ signal, liveData, historyPoints }: Props) {
             },
             y: {
               beginAtZero: true,
-              max: Y_MAX[signal] ?? 100,
+              max: yMax,
               ticks: { color: c.tick },
               grid:  { color: c.grid },
             },
           },
           plugins: {
-            legend: { labels: { color: c.legend } },
+            legend: { display: isDual, labels: { color: c.legend } },
             tooltip: {
               backgroundColor: c.tooltipBg,
               titleColor:      c.tooltipTitle,
@@ -128,14 +168,18 @@ export function LiveChart({ signal, liveData, historyPoints }: Props) {
       })
     } else {
       const chart = chartRef.current
-      chart.data.labels = labels
-      chart.data.datasets[0].data = values
-      chart.data.datasets[0].label = `${signal} Data`
+      chart.data.labels = historyPoints.map(p => new Date(p.timestamp))
+      chart.data.datasets[0].data = historyPoints.map(p => p.value)
+      chart.data.datasets[0].label = signalDisplayName(signals[0])
+      if (isDual && chart.data.datasets[1] && historyPointsB) {
+        chart.data.datasets[1].data = historyPointsB.map(p => p.value)
+        chart.data.datasets[1].label = signalDisplayName(signals[1])
+      }
       const scales = chart.options.scales as unknown as Record<string, ScaleOpts>
-      if (scales['y']) scales['y'].max = Y_MAX[signal] ?? 100
+      if (scales['y']) scales['y'].max = yMax
       applyChartColors(chart)
     }
-  }, [signal, historyPoints, liveData])
+  }, [signals, historyPoints, historyPointsB])
 
   // Recolor immediately when dark/light class changes on <html>
   useEffect(() => {

@@ -119,7 +119,7 @@ async def ws_pi(websocket: WebSocket):
                 msg = json.loads(raw)
                 if msg.get("type") == "frame" and isinstance(msg.get("data"), dict):
                     data_store.last_pi_frame_at = time.monotonic()
-                    await data_store.update(msg["data"])
+                    await data_store.update({**msg["data"], "pi_connected": True})
             except json.JSONDecodeError:
                 logger.warning("Received non-JSON from Pi: %s", raw[:120])
     except WebSocketDisconnect:

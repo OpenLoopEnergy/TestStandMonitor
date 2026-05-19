@@ -48,9 +48,9 @@ pip install -r backend/requirements.txt
 ### 3. Install frontend dependencies
 
 ```powershell
-cd frontend/teststandfrontend
+cd frontend
 npm install
-cd ../..
+cd ..
 ```
 
 ---
@@ -73,7 +73,7 @@ On first run it creates `dev.db` (SQLite) and seeds default settings automatical
 ### Terminal 2 — Frontend
 
 ```powershell
-cd frontend/teststandfrontend
+cd frontend
 npm run dev
 ```
 
@@ -126,7 +126,7 @@ TestStandWebInterface/
 │   └── services/
 │       ├── data_store.py     # In-memory signal store, WS broadcast
 │       └── csv_logger.py     # Background task: logs to DB every 5 s
-├── frontend/teststandfrontend/
+├── frontend/
 │   ├── src/                  # React + TypeScript source
 │   └── vite.config.ts        # Dev proxy config (API + WS → port 8000)
 ├── pi/
@@ -164,13 +164,8 @@ uvicorn main:app ...
 ```
 
 **npm command not found / package.json missing**  
-The frontend lives inside `frontend/teststandfrontend/`, not `frontend/`:
+Run npm from inside `frontend/`:
 ```powershell
-# Correct
-cd frontend/teststandfrontend
-npm run dev
-
-# Wrong
 cd frontend
 npm run dev
 ```

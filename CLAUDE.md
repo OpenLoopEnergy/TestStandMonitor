@@ -6,7 +6,7 @@ Hydraulic pump test stand web interface. Rebuilt from Flask/SQLite/Jinja2 into F
 ```
 [Raspberry Pi]              [Railway — Backend]           [Vercel — Frontend]
   pi/can_publisher.py  →   FastAPI (backend/main.py)  →  React + TypeScript
-  pi/can_decoder.py        ├─ /ws/pi  (from Pi)           frontend/teststandfrontend/
+  pi/can_decoder.py        ├─ /ws/pi  (from Pi)           frontend/
                            ├─ /ws/frontend (to browsers)
                            ├─ REST API
                            └─ SQLAlchemy (SQLite dev / PostgreSQL prod)
@@ -18,8 +18,8 @@ Hydraulic pump test stand web interface. Rebuilt from Flask/SQLite/Jinja2 into F
 pip install -r backend/requirements.txt
 python -m uvicorn backend.main:app --reload --port 8000
 
-# Terminal 2 — Frontend (note: frontend is inside frontend/teststandfrontend/, not frontend/)
-cd frontend/teststandfrontend
+# Terminal 2 — Frontend
+cd frontend
 npm install
 npm run dev
 # Opens at http://localhost:5173, proxies API/WS to port 8000
