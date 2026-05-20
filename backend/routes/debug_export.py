@@ -43,7 +43,8 @@ def export_debug_data(db: Session = Depends(get_db)):
         from backend.exportDebugXLSX import process_debug_to_excel
         excel_path = process_debug_to_excel(rows, metadata, EXPORT_DIR)
     except Exception as e:
-        logger.error("Debug Excel export failed: %s", e)
+        import traceback
+        logger.error("Debug Excel export failed: %s\n%s", e, traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
     excel_filename = os.path.basename(excel_path)

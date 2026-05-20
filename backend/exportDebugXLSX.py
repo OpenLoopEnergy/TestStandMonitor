@@ -277,11 +277,17 @@ def process_debug_to_excel(rows: list, metadata: dict, export_dir: str) -> str:
             if row_data:
                 worksheet.write(row_idx, 0, row_data[0], meta_key_fmt)
 
-        # Column widths
-        df_str = df.astype(str)
+        # Column widths — use .str.len() which is dtype-safe and vectorised
         for col_idx, col_name in enumerate(df.columns):
-            max_len = df_str[col_name].map(len).max() if len(df) > 0 else 0
-            worksheet.set_column(col_idx, col_idx, min(max(len(col_name), max_len) + 2, 30))
+            try:
+                if len(df) > 0:
+                    raw_max = df[col_name].astype(str).str.len().max()
+                    max_data_len = int(raw_max) if raw_max == raw_max else 0  # guard NaN
+                else:
+                    max_data_len = 0
+            except Exception:
+                max_data_len = 0
+            worksheet.set_column(col_idx, col_idx, min(max(len(col_name), max_data_len) + 2, 30))
 
         # Percent format for efficiency columns
         for col in ["Efficiency A", "Efficiency B"]:
