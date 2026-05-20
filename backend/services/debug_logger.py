@@ -32,18 +32,13 @@ async def run_debug_logger():
 
 async def _debug_tick():
     snapshot = data_store.latest.copy()
-    is_manual = snapshot.get("pb4", 1) != 0
 
-    # Same log conditions as csv_logger
-    if data_store.debug_mode:
-        if is_manual and not data_store.log_manual:
-            return
-    elif is_manual:
-        if not data_store.log_manual:
-            return
-    else:
-        if snapshot.get("trending") != 1:
-            return
+    # For the debug log, log_manual overrides everything — if the user explicitly
+    # enables it, capture data regardless of automatic/manual or trending state.
+    # Otherwise fall back to logging only when trending is active.
+    is_trending = snapshot.get("trending") == 1
+    if not data_store.log_manual and not is_trending:
+        return
 
     from backend.db.database import SessionLocal
     from backend.db.models import DebugLog
