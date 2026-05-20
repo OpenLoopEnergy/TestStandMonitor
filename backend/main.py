@@ -14,7 +14,8 @@ dotenv.load_dotenv()
 from backend.db.database import init_db
 from backend.services import data_store
 from backend.services.csv_logger import run_logger
-from backend.routes import data, settings, export, files
+from backend.services.debug_logger import run_debug_logger
+from backend.routes import data, settings, export, files, debug_export
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,7 +32,11 @@ async def lifespan(app: FastAPI):
 
     logger.info("Starting background CSV logger…")
 
-    tasks = [asyncio.create_task(run_logger()), asyncio.create_task(run_pi_watchdog())]
+    tasks = [
+        asyncio.create_task(run_logger()),
+        asyncio.create_task(run_debug_logger()),
+        asyncio.create_task(run_pi_watchdog()),
+    ]
 
     yield  # App running
 
@@ -65,6 +70,7 @@ app.include_router(data.router)
 app.include_router(settings.router)
 app.include_router(export.router)
 app.include_router(files.router)
+app.include_router(debug_export.router)
 
 
 @app.get("/health")
@@ -78,15 +84,24 @@ _PI_TIMEOUT_SECONDS = 5  # Mark disconnected if no CAN frame received in this wi
 
 
 async def run_pi_watchdog():
-    """Sets pi_connected based on whether CAN frames are arriving, not WebSocket state."""
+    """Sets pi_connected based on whether CAN frames are arriving, not WebSocket state.
+    Also computes and broadcasts CAN frame rate every 2 s."""
+    _WATCHDOG_INTERVAL = 2
     while True:
-        await asyncio.sleep(2)
+        await asyncio.sleep(_WATCHDOG_INTERVAL)
         age = time.monotonic() - data_store.last_pi_frame_at
         currently_connected = data_store.latest.get("pi_connected", False)
+
+        fps = round(data_store._frame_count / _WATCHDOG_INTERVAL, 1)
+        data_store._frame_count = 0  # reset window
+
+        updates: dict = {"pi_fps": fps}
         if age > _PI_TIMEOUT_SECONDS and currently_connected:
-            await data_store.update({"pi_connected": False})
+            updates["pi_connected"] = False
         elif age <= _PI_TIMEOUT_SECONDS and not currently_connected:
-            await data_store.update({"pi_connected": True})
+            updates["pi_connected"] = True
+
+        await data_store.update(updates)
 
 
 # ── WebSocket: Pi → Backend ───────────────────────────────────────────────────
@@ -119,6 +134,7 @@ async def ws_pi(websocket: WebSocket):
                 msg = json.loads(raw)
                 if msg.get("type") == "frame" and isinstance(msg.get("data"), dict):
                     data_store.last_pi_frame_at = time.monotonic()
+                    data_store._frame_count += 1
                     await data_store.update({**msg["data"], "pi_connected": True})
             except json.JSONDecodeError:
                 logger.warning("Received non-JSON from Pi: %s", raw[:120])

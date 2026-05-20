@@ -184,6 +184,9 @@ export default function PastTests() {
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
+            <a href="/debug" className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1.5 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">
+              Debug
+            </a>
             <a href="/" className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1.5 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">
               ← Dashboard
             </a>

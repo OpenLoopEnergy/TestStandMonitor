@@ -417,6 +417,14 @@ export default function Dashboard() {
               : <span className="text-gray-400 dark:text-gray-500">○ Idle</span>}
           </span>
           <ThemeToggle />
+          {isAdmin && (
+            <a
+              href="/debug"
+              className="cursor-pointer text-sm bg-black/10 hover:bg-black/20 text-gray-900 px-4 py-2 rounded-lg font-semibold transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white"
+            >
+              Debug
+            </a>
+          )}
           <a
             href="/past-tests"
             className="cursor-pointer text-base bg-black/10 hover:bg-black/20 text-gray-900 px-5 py-2.5 rounded-lg font-semibold transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white"

@@ -302,14 +302,32 @@ def decoded_to_live_frame(decoded: dict) -> dict | None:
             "tp":       decoded["signalDispTP"],
             "pb4":      decoded["signalPB4"],
             "tp_reved": decoded["signalOut_TP_Reved"],
+            "started":   decoded["signalStarted"],
+            "stopped":   decoded["signalStopped"],
+            "e_stopped": decoded["signalE_Stopped"],
+            "start_btn": decoded["signalStart"],
+            "stop_sw":   decoded["signalStop_sw"],
+            "estop_sw":  decoded["signaleStop_sw"],
+            "tp_fwd":    decoded["signalTP_FWD"],
+            "tp_rev":    decoded["signalTP_REV"],
         }
     if mid == 0x0CFF020A:
         return {
-            "lcSetpoint": decoded["signalLC1_Setpoint"],
-            "lcRegulate": decoded["signalLC1_Regulate"],
+            "lcSetpoint":   decoded["signalLC1_Setpoint"],
+            "lcRegulate":   decoded["signalLC1_Regulate"],
+            "lc1":          decoded["signalLC1"],
+            "lc1_feedback": decoded["signalLC1_Feedback"],
+            "lc1_enable":   decoded["signalLC1_Enable"],
+            "lc1_state":    decoded["signalLC1_State"],
         }
     if mid == 0x0CFF030A:
-        return {"sp": decoded["signalSP"]}
+        return {
+            "sp":          decoded["signalSP"],
+            "sp_feedback": decoded["signalSPFeedback"],
+            "sp_enable":   decoded["signalSP_enable"],
+            "sp_regulate": decoded["signalSP_Regulate"],
+            "sp_rev":      decoded["signalSP_Rev"],
+        }
     if mid == 0x0CFF040A:
         return {
             "delay":      decoded["signalDelay"],
@@ -318,7 +336,12 @@ def decoded_to_live_frame(decoded: dict) -> dict | None:
             "step":       decoded["signalBubbleStr"],
         }
     if mid == 0x0CFF050A:
-        return None
+        return {
+            "sol_a":       decoded["signalSol_A"],
+            "sol_b":       decoded["signalSol_B"],
+            "tp9a_enable": decoded["signalTP9A_Enable"],
+            "tp9a_dir":    decoded["signalTP9A_Dir"],
+        }
     if mid == 0x0CFF0C0A:
         return {
             "p2": decoded["signal_Scaled_P2"],
@@ -333,8 +356,95 @@ def decoded_to_live_frame(decoded: dict) -> dict | None:
         return {"ee_dir_switch": decoded["signalEE_EEDirSwitch"]}
     if mid == 0x0CFF0E14:
         return {
-            "f3": decoded["signalM2_F3"],
+            "f3":          decoded["signalM2_F3"],
             "m2_tp9a_dir": decoded["signalM2_TP9A_Dir"],
+            "m2_pot":      decoded["signalM2_POT"],
+            "m2_tp9a":     decoded["signalM2_TP9A"],
+        }
+
+    if mid == 0x0CFF070A:
+        return {
+            "ee_sm_rpm":      decoded["signalEE_SM_RPM"],
+            "ee_sm_rate":     decoded["signalEE_SM_Rate"],
+            "ee_sm_timer":    decoded["signalEE_SM_Timer"],
+            "ee_cycle_delay": decoded["signalEECycleDelay"],
+        }
+    if mid == 0x0CFF080A:
+        return {
+            "ee_cycle_time1": decoded["signalEECycleTime1"],
+            "ee_cycle_time2": decoded["signalEECycleTime2"],
+            "ee_cycle_time3": decoded["signalEECycleTime3"],
+            "ee_cycle_time4": decoded["signalEECycleTime4"],
+            "ee_cycle_time5": decoded["signalEECycleTime5"],
+            "ee_cycle_psi1":  decoded["signalEECyclePSI1"],
+        }
+    if mid == 0x0CFF090A:
+        return {
+            "ee_cycle_psi2": decoded["signalEECyclePSI2"],
+            "ee_cycle_psi3": decoded["signalEECyclePSI3"],
+            "ee_cycle_psi4": decoded["signalEECyclePSI4"],
+            "ee_cycle_psi5": decoded["signalEECyclePSI5"],
+        }
+    if mid == 0x0CFF0A0A:
+        return {
+            "ee_t1_scale": decoded["signalEE_T1_Scale"],
+            "ee_t3_scale": decoded["signalEE_T3_Scale"],
+            "ee_f1_scale": decoded["signalEE_F1_Scale"],
+            "ee_f2_scale": decoded["signalEE_F2_Scale"],
+        }
+    if mid == 0x0CFF0B0A:
+        return {
+            "ee_f3_scale": decoded["signalEE_F3_Scale"],
+            "ee_p1_scale": decoded["signalEE_P1_Scale"],
+            "ee_p4_scale": decoded["signalEE_P4_Scale"],
+            "ee_p5_scale": decoded["signalEE_P5_Scale"],
+        }
+
+    if mid == 0x0CFF110A:
+        return {
+            "m1_ports": {
+                "sp_open":          decoded["signalSP_Open"],
+                "sp_short":         decoded["signalSP_Short"],
+                "sp_enable_open":   decoded["signalSP_Enable_Open"],
+                "sp_enable_short":  decoded["signalSP_Enable_Short"],
+                "sp_rev_open":      decoded["signalSP_REV_Open"],
+                "sp_rev_short":     decoded["signalSP_REV_Short"],
+                "tp_open":          decoded["signalTP_Open"],
+                "tp_short":         decoded["signalTP_Short"],
+                "tp_enable_open":   decoded["signalTP_ENABLE_Open"],
+                "tp_enable_short":  decoded["signalTP_ENABLE_Short"],
+                "tp_rev_open":      decoded["signalTP_REV_Open"],
+                "tp_rev_short":     decoded["signalTP_REV_Short"],
+                "lc1_open":         decoded["signalLC1_Open"],
+                "lc1_short":        decoded["signalLC1_Short"],
+                "lc1_pwr_open":     decoded["signalLC1_PWR_Open"],
+                "lc1_pwr_short":    decoded["signalLC1_PWR_Short"],
+                "led_open":         decoded["signalLED_Open"],
+                "led_short":        decoded["signalLED_Short"],
+                "m1_blink":         decoded["signalM1_Blink"],
+            }
+        }
+
+    if mid == 0x0CFF0F14:
+        return {
+            "m2_ports": {
+                "polarity_open":   decoded["signalPolarity_Open"],
+                "polarity_short":  decoded["signalPolarity_Short"],
+                "stop_lamp_open":  decoded["signalStop_Lamp_Open"],
+                "stop_lamp_short": decoded["signalStop_Lamp_Short"],
+                "sol_a_open":      decoded["signalSOL_A_Open"],
+                "sol_a_short":     decoded["signalSOL_A_Short"],
+                "sol_b_open":      decoded["signalSOL_B_Open"],
+                "sol_b_short":     decoded["signalSOL_B_Short"],
+                "tp9a_open":       decoded["signalTP9A_Open"],
+                "tp9a_short":      decoded["signalTP9A_Short"],
+                "tp9a_fwd_open":   decoded["signalTP9A_FWD_Open"],
+                "tp9a_fwd_short":  decoded["signalTP9A_FWD_Short"],
+                "tp9a_rev_open":   decoded["signalTP9A_REV_Open"],
+                "tp9a_rev_short":  decoded["signalTP9A_REV_Short"],
+                "m2_blink":        decoded["signalM2_Blink"],
+                "supply_voltage":  decoded["signalSupplyVoltage"],
+            }
         }
 
     return None  # Message doesn't contribute to the live display

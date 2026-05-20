@@ -51,6 +51,113 @@ class TestLog(Base):
     trending = Column(Integer, nullable=True)
 
 
+class DebugLog(Base):
+    """Debug log — one row per 5-second tick capturing all debug-screen signals."""
+    __tablename__ = "debug_log"
+
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    logged_at  = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    session_id = Column(UUIDType, nullable=True)
+
+    # ── Core sensors (same as TestLog) ──────────────────────────────────────
+    s1 = Column(Integer); sp = Column(Integer); tp = Column(Integer)
+    cycle = Column(Integer); cycle_timer = Column(Integer)
+    lc_setpoint = Column(Integer); lc_regulate = Column(Integer)
+    step = Column(Text)
+    f1 = Column(Float); f2 = Column(Float); f3 = Column(Float)
+    t1 = Column(Integer); t3 = Column(Integer)
+    p1 = Column(Integer); p2 = Column(Integer); p3 = Column(Integer)
+    p4 = Column(Integer); p5 = Column(Integer)
+    tp_reversed = Column(Boolean, nullable=True)
+    ee_dir_switch = Column(Integer, nullable=True)
+    trending = Column(Integer, nullable=True)
+
+    # ── Machine state ────────────────────────────────────────────────────────
+    started  = Column(Integer, nullable=True)
+    stopped  = Column(Integer, nullable=True)
+    e_stopped = Column(Integer, nullable=True)
+
+    # ── M1 command outputs ───────────────────────────────────────────────────
+    sol_a       = Column(Integer, nullable=True)
+    sol_b       = Column(Integer, nullable=True)
+    tp9a_enable = Column(Integer, nullable=True)
+    tp9a_dir    = Column(Integer, nullable=True)
+
+    # ── LC1 control loop ─────────────────────────────────────────────────────
+    lc1          = Column(Integer, nullable=True)
+    lc1_feedback = Column(Integer, nullable=True)
+    lc1_enable   = Column(Integer, nullable=True)
+    lc1_state    = Column(Integer, nullable=True)
+
+    # ── SP circuit ───────────────────────────────────────────────────────────
+    sp_feedback = Column(Integer, nullable=True)
+    sp_enable   = Column(Integer, nullable=True)
+    sp_regulate = Column(Integer, nullable=True)
+    sp_rev      = Column(Integer, nullable=True)
+
+    # ── M2 data ──────────────────────────────────────────────────────────────
+    m2_pot      = Column(Integer, nullable=True)
+    m2_tp9a     = Column(Integer, nullable=True)
+    m2_tp9a_dir = Column(Integer, nullable=True)
+
+    # ── M1 port flags (flattened from m1_ports nested dict) ─────────────────
+    m1_sp_open         = Column(Integer, nullable=True)
+    m1_sp_short        = Column(Integer, nullable=True)
+    m1_sp_enable_open  = Column(Integer, nullable=True)
+    m1_sp_enable_short = Column(Integer, nullable=True)
+    m1_sp_rev_open     = Column(Integer, nullable=True)
+    m1_sp_rev_short    = Column(Integer, nullable=True)
+    m1_tp_open         = Column(Integer, nullable=True)
+    m1_tp_short        = Column(Integer, nullable=True)
+    m1_tp_enable_open  = Column(Integer, nullable=True)
+    m1_tp_enable_short = Column(Integer, nullable=True)
+    m1_tp_rev_open     = Column(Integer, nullable=True)
+    m1_tp_rev_short    = Column(Integer, nullable=True)
+    m1_lc1_open        = Column(Integer, nullable=True)
+    m1_lc1_short       = Column(Integer, nullable=True)
+    m1_lc1_pwr_open    = Column(Integer, nullable=True)
+    m1_lc1_pwr_short   = Column(Integer, nullable=True)
+    m1_led_open        = Column(Integer, nullable=True)
+    m1_led_short       = Column(Integer, nullable=True)
+    m1_blink           = Column(Integer, nullable=True)
+
+    # ── M2 port flags (flattened from m2_ports nested dict) ─────────────────
+    m2_polarity_open   = Column(Integer, nullable=True)
+    m2_polarity_short  = Column(Integer, nullable=True)
+    m2_stop_lamp_open  = Column(Integer, nullable=True)
+    m2_stop_lamp_short = Column(Integer, nullable=True)
+    m2_sol_a_open      = Column(Integer, nullable=True)
+    m2_sol_a_short     = Column(Integer, nullable=True)
+    m2_sol_b_open      = Column(Integer, nullable=True)
+    m2_sol_b_short     = Column(Integer, nullable=True)
+    m2_tp9a_open       = Column(Integer, nullable=True)
+    m2_tp9a_short      = Column(Integer, nullable=True)
+    m2_tp9a_fwd_open   = Column(Integer, nullable=True)
+    m2_tp9a_fwd_short  = Column(Integer, nullable=True)
+    m2_tp9a_rev_open   = Column(Integer, nullable=True)
+    m2_tp9a_rev_short  = Column(Integer, nullable=True)
+    m2_blink           = Column(Integer, nullable=True)
+    m2_supply_voltage  = Column(Integer, nullable=True)
+
+    # ── EE motor config ──────────────────────────────────────────────────────
+    ee_sm_rpm      = Column(Integer, nullable=True)
+    ee_sm_rate     = Column(Integer, nullable=True)
+    ee_sm_timer    = Column(Integer, nullable=True)
+    ee_cycle_delay = Column(Integer, nullable=True)
+
+    # ── EE cycle profile ─────────────────────────────────────────────────────
+    ee_cycle_time1 = Column(Integer, nullable=True)
+    ee_cycle_time2 = Column(Integer, nullable=True)
+    ee_cycle_time3 = Column(Integer, nullable=True)
+    ee_cycle_time4 = Column(Integer, nullable=True)
+    ee_cycle_time5 = Column(Integer, nullable=True)
+    ee_cycle_psi1  = Column(Integer, nullable=True)
+    ee_cycle_psi2  = Column(Integer, nullable=True)
+    ee_cycle_psi3  = Column(Integer, nullable=True)
+    ee_cycle_psi4  = Column(Integer, nullable=True)
+    ee_cycle_psi5  = Column(Integer, nullable=True)
+
+
 class AppSettings(Base):
     """Key-value store for user-configurable settings (program name, input factor, etc.)."""
     __tablename__ = "app_settings"
