@@ -147,7 +147,7 @@ function D({ label, value, vt }: { label: string; value: React.ReactNode; vt?: V
 
 function S({ title }: { title: string }) {
   return (
-    <p className="col-span-2 mt-3 mb-1 text-[11px] uppercase tracking-widest text-gray-400 dark:text-gray-500 first:mt-0">{title}</p>
+    <p className="col-span-3 mt-2 mb-0.5 text-[11px] uppercase tracking-widest text-gray-400 dark:text-gray-500 first:mt-0">{title}</p>
   )
 }
 
@@ -340,7 +340,7 @@ export default function Debug() {
         {/* Col 2: Live sensor readings */}
         <div className={`${CARD} w-[31%] shrink-0`}>
           <h2 className={CARD_TITLE}>Live Data</h2>
-          <div className="grid grid-cols-2 gap-x-4">
+          <div className="grid grid-cols-3 gap-x-2">
             <S title="Sensors" />
             <D label="S1 (Speed)"    value={`${data.s1 ?? 0} RPM`}         vt="rpm" />
             <D label="SP (Setpoint)" value={`${data.sp ?? 0} RPM`}         vt="rpm" />
@@ -390,7 +390,7 @@ export default function Debug() {
         {/* Col 3: Deep diagnostics */}
         <div className={`${CARD} flex-1`}>
           <h2 className={CARD_TITLE}>Diagnostics</h2>
-          <div className="grid grid-cols-2 gap-x-4">
+          <div className="grid grid-cols-3 gap-x-2">
             <S title="LC1 Control Loop" />
             <D label="LC1 Actual"    value={data.lc1 ?? '—'}              vt="raw" />
             <D label="LC1 Setpoint"  value={`${data.lcSetpoint ?? 0} PSI`} vt="psi" />
