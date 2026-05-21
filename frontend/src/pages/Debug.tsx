@@ -11,20 +11,21 @@ const ADMIN_KEY      = 'teststand_admin'
 
 function FaultBadge({ value }: { value: number | undefined }) {
   if (value === undefined)
-    return <span className="text-gray-400 dark:text-gray-600">—</span>
+    return <span className="text-gray-300 dark:text-gray-600">—</span>
   if (value === 0)
-    return <span className="inline-block px-2 py-px rounded text-[12px] font-bold bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300">OK</span>
-  return <span className="inline-block px-2 py-px rounded text-[12px] font-bold bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300">Fault</span>
+    return <span className="inline-block px-2 py-px rounded text-[12px] font-bold bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-300">OK</span>
+  return <span className="inline-block px-2 py-px rounded text-[12px] font-bold bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-300">Fault</span>
 }
 
 function ActiveBadge({ value, onLabel = 'Yes', offLabel = 'No' }: {
   value: number | undefined; onLabel?: string; offLabel?: string
 }) {
   if (value === undefined)
-    return <span className="text-gray-400 dark:text-gray-600">—</span>
+    return <span className="text-gray-300 dark:text-gray-600">—</span>
   if (value === 1)
-    return <span className="inline-block px-2 py-px rounded text-[12px] font-bold bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300">{onLabel}</span>
-  return <span className="inline-block px-2 py-px rounded text-[12px] font-bold bg-black/5 text-gray-500 dark:bg-white/5 dark:text-gray-400">{offLabel}</span>
+    return <span className="inline-block px-2 py-px rounded text-[12px] font-bold bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-300">{onLabel}</span>
+  // Off state — visible in both modes but clearly inactive
+  return <span className="inline-block px-2 py-px rounded text-[12px] font-bold bg-gray-200 text-gray-600 dark:bg-white/[0.12] dark:text-gray-300">{offLabel}</span>
 }
 
 // ── Port table data ────────────────────────────────────────────────────────────
@@ -127,20 +128,22 @@ function M2PortTable({ ports }: { ports: M2PortsData | undefined }) {
 type ValueType = 'psi' | 'gpm' | 'rpm' | 'temp' | 'pct' | 'raw' | undefined
 
 const VT_COLOR: Record<NonNullable<ValueType>, string> = {
-  psi:  'text-blue-400 dark:text-blue-300',
-  gpm:  'text-cyan-400 dark:text-cyan-300',
-  rpm:  'text-amber-400 dark:text-amber-300',
-  temp: 'text-orange-400 dark:text-orange-300',
-  pct:  'text-purple-400 dark:text-purple-300',
-  raw:  'text-gray-400 dark:text-gray-500',
+  psi:  'text-blue-600 dark:text-blue-400',
+  gpm:  'text-cyan-600 dark:text-cyan-400',
+  rpm:  'text-amber-600 dark:text-amber-400',
+  temp: 'text-orange-600 dark:text-orange-400',
+  pct:  'text-purple-600 dark:text-purple-400',
+  raw:  'text-gray-700 dark:text-gray-200',   // neutral but clearly readable
 }
 
 function D({ label, value, vt }: { label: string; value: React.ReactNode; vt?: ValueType }) {
   const valClass = vt ? VT_COLOR[vt] : 'text-gray-900 dark:text-white'
   return (
-    <div className="flex items-center justify-between py-[5px] border-b border-black/[0.04] dark:border-white/[0.04]">
-      <span className="text-[13px] text-gray-500 dark:text-gray-400 truncate mr-1">{label}</span>
-      <span className={`text-[13px] font-semibold whitespace-nowrap shrink-0 ${valClass}`}>{value}</span>
+    <div className="flex items-center justify-between py-[4px] border-b border-black/[0.07] dark:border-white/[0.07]">
+      {/* Label — smaller + muted so value stands out */}
+      <span className="text-[11px] font-medium text-gray-400 dark:text-gray-500 truncate mr-1 leading-snug">{label}</span>
+      {/* Value — larger + bold + colored */}
+      <span className={`text-[13px] font-bold whitespace-nowrap shrink-0 leading-snug ${valClass}`}>{value}</span>
     </div>
   )
 }
