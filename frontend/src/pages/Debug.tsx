@@ -165,6 +165,22 @@ export default function Debug() {
   }, [])
 
   const { data, connected, piConnected } = useLiveData()
+
+  // Scale the entire page to fill whatever screen/TV is being used.
+  // Design reference: 1400 × 820. On a 1080p TV this gives ~1.3x (bigger/easier
+  // to read); on a small laptop it scales down so nothing is clipped.
+  const [scale, setScale] = useState(1)
+  useEffect(() => {
+    const DESIGN_W = 1400, DESIGN_H = 820
+    const update = () => {
+      const s = Math.min(window.innerWidth / DESIGN_W, window.innerHeight / DESIGN_H)
+      setScale(parseFloat(s.toFixed(4)))
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
   const [inputFactor, setInputFactor] = useState(11)
   const [effAHistory, setEffAHistory] = useState<SignalPoint[]>([])
   const [effBHistory, setEffBHistory] = useState<SignalPoint[]>([])
@@ -239,8 +255,21 @@ export default function Debug() {
   const fps           = data.pi_fps ?? 0
   const rowsLogged    = data.debug_rows_logged ?? 0
 
+  // transform: scale keeps layout unchanged but scales visually.
+  // Expanding width/height by 1/scale ensures the div fills the viewport
+  // exactly once the scale is applied.
+  const scaleStyle: React.CSSProperties = scale !== 1 ? {
+    transform: `scale(${scale})`,
+    transformOrigin: 'top left',
+    width:  `${(100 / scale).toFixed(3)}vw`,
+    height: `${(100 / scale).toFixed(3)}vh`,
+  } : {}
+
   return (
-    <div className="h-screen flex flex-col bg-white text-gray-900 overflow-hidden dark:bg-[#1a1a1a] dark:text-white">
+    <div
+      style={scaleStyle}
+      className="h-screen flex flex-col bg-white text-gray-900 overflow-hidden dark:bg-[#1a1a1a] dark:text-white"
+    >
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 shrink-0 dark:border-white/10">
@@ -309,8 +338,9 @@ export default function Debug() {
         </div>
 
         {/* Col 2: Live sensor readings */}
-        <div className={`${CARD} w-[31%] shrink-0`}>
+        <div className={`${CARD} w-[31%] shrink-0 min-h-0`}>
           <h2 className={CARD_TITLE}>Live Data</h2>
+          <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="grid grid-cols-2 gap-x-4">
             <S title="Sensors" />
             <D label="S1 (Speed)"    value={`${data.s1 ?? 0} RPM`}         vt="rpm" />
@@ -356,11 +386,13 @@ export default function Debug() {
             <D label="TP9A Dir"  value={<ActiveBadge value={data.tp9a_dir} onLabel="FWD" offLabel="REV" />} />
             <D label="M2 TP9A"   value={<ActiveBadge value={data.m2_tp9a_dir} onLabel="FWD" offLabel="REV" />} />
           </div>
+          </div>{/* end scrollable wrapper */}
         </div>
 
         {/* Col 3: Deep diagnostics */}
-        <div className={`${CARD} flex-1`}>
+        <div className={`${CARD} flex-1 min-h-0`}>
           <h2 className={CARD_TITLE}>Diagnostics</h2>
+          <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="grid grid-cols-2 gap-x-4">
             <S title="LC1 Control Loop" />
             <D label="LC1 Actual"    value={data.lc1 ?? '—'}              vt="raw" />
@@ -409,6 +441,7 @@ export default function Debug() {
             <D label="PSI 4"         value={data.ee_cycle_psi4 ?? '—'}    vt="psi" />
             <D label="PSI 5"         value={data.ee_cycle_psi5 ?? '—'}    vt="psi" />
           </div>
+          </div>{/* end scrollable wrapper */}
         </div>
 
       </div>
