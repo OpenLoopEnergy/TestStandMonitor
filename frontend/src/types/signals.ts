@@ -45,7 +45,7 @@ export interface LiveData {
   t1: number
   t3: number
 
-  // Flows (raw — F1/F2 use × 0.01 on display; F3 uses × 0.001)
+  // Flows (raw — F1/F2/F3 all use × 0.01 on display)
   f1: number
   f2: number
   f3: number

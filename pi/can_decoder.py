@@ -341,22 +341,22 @@ def decoded_to_live_frame(decoded: dict) -> dict | None:
             "sol_b":       decoded["signalSol_B"],
             "tp9a_enable": decoded["signalTP9A_Enable"],
             "tp9a_dir":    decoded["signalTP9A_Dir"],
+            "f3":          decoded["signal_Scaled_F3"],
         }
     if mid == 0x0CFF0C0A:
         return {
             "p2": decoded["signal_Scaled_P2"],
             "p4": decoded["signal_Scaled_P4"],
+            "f1": decoded["signal_Scaled_F1"],
         }
     if mid == 0x0CFF0D14:
         return {
-            "f1": decoded["SignalF1"],
             "p3": decoded["SignalP3"],
         }
     if mid == 0x0CFF060A:
         return {"ee_dir_switch": decoded["signalEE_EEDirSwitch"]}
     if mid == 0x0CFF0E14:
         return {
-            "f3":          decoded["signalM2_F3"],
             "m2_tp9a_dir": decoded["signalM2_TP9A_Dir"],
             "m2_pot":      decoded["signalM2_POT"],
             "m2_tp9a":     decoded["signalM2_TP9A"],
