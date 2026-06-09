@@ -64,7 +64,7 @@ export function HeaderInfoPanel({ onInputFactorChange, isAdmin = false }: Props)
   }
 
   function field(label: string, key: keyof HeaderData, type = 'text') {
-    const val = editing ? (draft[key] ?? '') : (data[key] ?? '—')
+    const val = editing ? (draft[key] ?? '') : (data[key] || '—')
     return (
       <div key={key} className="flex flex-col gap-0.5">
         <label className="text-xs text-gray-500 uppercase tracking-wide">{label}</label>

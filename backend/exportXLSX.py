@@ -26,6 +26,7 @@ C_ROW_EVEN    = '#EBF0F5'   # Alternating row color
 C_GRIDLINE    = '#3D5166'   # Grid lines in the dark chart
 C_PLOT_BG     = '#0D1421'   # The "Inner" area of the chart
 C_THRESHOLD   = '#39B54A'   # Green — Min Efficiency threshold line
+C_EFF_AVG     = '#00E5FF'   # Bright Cyan — Average Efficiency line
 
 
 def process_csv_to_excel_from_file(file_path):
@@ -192,10 +193,15 @@ def process_csv_to_excel_from_file(file_path):
                 worksheet.set_column(col_idx, col_idx, min(col_width, 40))
 
             # Apply percent formatting
-            for col in ["EffRaw_F1", "EffRaw_F3", "Efficiency A", "Efficiency B", "Average Efficiency", "Min Eff Threshold"]:
+            for col in ["EffRaw_F1", "EffRaw_F3", "Efficiency A", "Efficiency B", "Average Efficiency"]:
                 if col in df.columns:
                     idx = df.columns.get_loc(col)
                     worksheet.set_column(idx, idx, 14, percent_fmt)
+
+            # Hide the threshold helper column (chart still references it as a data source)
+            if "Min Eff Threshold" in df.columns:
+                thresh_idx = df.columns.get_loc("Min Eff Threshold")
+                worksheet.set_column(thresh_idx, thresh_idx, 0, percent_fmt)
 
             # Alternating row colors
             last_row, data_start = len(df) + offset + 1, offset + 1
@@ -298,29 +304,33 @@ def process_csv_to_excel_from_file(file_path):
                 chartsheet.set_chart(chart)
 
                 # ── Customer Report Chartsheet ───────────────────────────────
-                # Simpler view: Efficiency columns + avg line + LC Setpoint.
-                # Includes min efficiency threshold line when the value is set.
+                # Fwd/Rev efficiency columns + avg/threshold lines + LC Setpoint.
+                # Uses a single combine() — xlsxwriter only supports one combined
+                # chart per base chart; all line series go into one combined chart.
                 cust_col_chart = workbook.add_chart({"type": "column"})
 
                 col_ea = column_letter(df.columns.get_loc("Efficiency A"))
                 cust_col_chart.add_series({
                     "name": "Fwd Efficiency (F1)", "categories": time_cats(),
                     "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
-                    "fill": {"color": C_EFF_FWD, "transparency": 35}, "border": {"none": True},
+                    "fill": {"color": C_EFF_FWD, "transparency": 60}, "border": {"none": True},
                 })
                 col_eb = column_letter(df.columns.get_loc("Efficiency B"))
                 cust_col_chart.add_series({
                     "name": "Rev Efficiency (F3)", "categories": time_cats(),
                     "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
-                    "fill": {"color": C_EFF_REV, "transparency": 35}, "border": {"none": True},
+                    "fill": {"color": C_EFF_REV, "transparency": 60}, "border": {"none": True},
                 })
 
+                # One combined line chart: avg + threshold (primary Y) + LC Setpoint (secondary Y)
                 cust_line_chart = workbook.add_chart({"type": "line"})
+
                 col_avg = column_letter(df.columns.get_loc("Average Efficiency"))
                 cust_line_chart.add_series({
                     "name": "Average Efficiency", "categories": time_cats(),
                     "values": f"=Data!${col_avg}${first_row}:${col_avg}${chart_last}",
-                    "line": {"color": C_WHITE, "width": 2.25},
+                    "line": {"color": C_EFF_AVG, "width": 3},
+                    "marker": {"type": "none"},
                 })
                 if min_thresh_letter:
                     cust_line_chart.add_series({
@@ -329,18 +339,16 @@ def process_csv_to_excel_from_file(file_path):
                         "line": {"color": C_THRESHOLD, "width": 2, "dash_type": "dash"},
                         "marker": {"type": "none"},
                     })
-                cust_col_chart.combine(cust_line_chart)
-
                 if H_lc_letter:
-                    cust_lc_chart = workbook.add_chart({"type": "line"})
-                    cust_lc_chart.add_series({
+                    cust_line_chart.add_series({
                         "name": "LC Setpoint", "categories": time_cats(),
                         "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
                         "fill": {"none": True},
                         "line": {"color": C_AMBER, "width": 2, "dash_type": "dash"},
                         "y2_axis": True,
                     })
-                    cust_col_chart.combine(cust_lc_chart)
+
+                cust_col_chart.combine(cust_line_chart)
 
                 cust_col_chart.set_chartarea({"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
                 cust_col_chart.set_plotarea({"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
