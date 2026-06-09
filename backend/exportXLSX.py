@@ -25,6 +25,7 @@ C_BORDER_DARK = '#1A2733'   # Header borders
 C_ROW_EVEN    = '#EBF0F5'   # Alternating row color
 C_GRIDLINE    = '#3D5166'   # Grid lines in the dark chart
 C_PLOT_BG     = '#0D1421'   # The "Inner" area of the chart
+C_THRESHOLD   = '#39B54A'   # Green — Min Efficiency threshold line
 
 
 def process_csv_to_excel_from_file(file_path):
@@ -33,8 +34,10 @@ def process_csv_to_excel_from_file(file_path):
             file_contents = csv_file.read()
 
         header_keywords = ["Program Name", "Description", "Employee ID", "Comp Set",
-                           "Input Factor", "Input Factor Type", "Serial Number", "Customer ID"]
-        float_fields = ["Input Factor", "Serial Number", "Employee ID", "Comp Set", "Customer ID"]
+                           "Input Factor", "Input Factor Type", "Serial Number", "Customer ID",
+                           "Min Efficiency %"]
+        float_fields = ["Input Factor", "Serial Number", "Employee ID", "Comp Set", "Customer ID",
+                        "Min Efficiency %"]
         metadata, data_lines, header_row_found, metadata_row_indices = [], [], False, {}
 
         reader = csv.reader(io.StringIO(file_contents))
@@ -93,6 +96,16 @@ def process_csv_to_excel_from_file(file_path):
                 if "cu/cm" in str(r[1]).strip().lower(): is_cu_in = False
                 break
 
+        # Extract optional Min Efficiency % (e.g. 93.0 means 93%)
+        min_eff_pct = None
+        for r in metadata:
+            if r and str(r[0]).strip() == "Min Efficiency %":
+                try:
+                    min_eff_pct = float(r[1])
+                except (ValueError, IndexError, TypeError):
+                    pass
+                break
+
         # 1. Theoretical Flow
         def calculate_theo_flow(row):
             rn = row.name + offset + 2
@@ -133,13 +146,19 @@ def process_csv_to_excel_from_file(file_path):
 
             df["Efficiency A"] = df.apply(eff_a_formula, axis=1)
             df["Efficiency B"] = df.apply(eff_b_formula, axis=1)
-            
+
             # 4. Average Efficiency (Continuous Average of raw sensors)
             def eff_avg_formula(row):
                 rn = row.name + offset + 2
                 return f'=IFERROR(AVERAGE(${W1_L}{rn},${W3_L}{rn}),NA())'
-            
+
             df["Average Efficiency"] = df.apply(eff_avg_formula, axis=1)
+
+        # 5. Min Efficiency Threshold (constant column when provided)
+        min_thresh_letter = None
+        if min_eff_pct is not None and min_eff_pct > 0:
+            df["Min Eff Threshold"] = min_eff_pct / 100.0
+            min_thresh_letter = column_letter(df.columns.get_loc("Min Eff Threshold"))
 
         # --- Excel Export ---
         timestamp = get_export_now().strftime("%m-%d-%Y_%I-%M-%S_%p")
@@ -173,7 +192,7 @@ def process_csv_to_excel_from_file(file_path):
                 worksheet.set_column(col_idx, col_idx, min(col_width, 40))
 
             # Apply percent formatting
-            for col in ["EffRaw_F1", "EffRaw_F3", "Efficiency A", "Efficiency B", "Average Efficiency"]:
+            for col in ["EffRaw_F1", "EffRaw_F3", "Efficiency A", "Efficiency B", "Average Efficiency", "Min Eff Threshold"]:
                 if col in df.columns:
                     idx = df.columns.get_loc(col)
                     worksheet.set_column(idx, idx, 14, percent_fmt)
@@ -277,6 +296,74 @@ def process_csv_to_excel_from_file(file_path):
                 chart.set_legend({"position": "bottom", "font": {"color": C_WHITE}})
                 chartsheet = workbook.add_chartsheet("Report Chart")
                 chartsheet.set_chart(chart)
+
+                # ── Customer Report Chartsheet ───────────────────────────────
+                # Simpler view: Efficiency columns + avg line + LC Setpoint.
+                # Includes min efficiency threshold line when the value is set.
+                cust_col_chart = workbook.add_chart({"type": "column"})
+
+                col_ea = column_letter(df.columns.get_loc("Efficiency A"))
+                cust_col_chart.add_series({
+                    "name": "Fwd Efficiency (F1)", "categories": time_cats(),
+                    "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
+                    "fill": {"color": C_EFF_FWD, "transparency": 35}, "border": {"none": True},
+                })
+                col_eb = column_letter(df.columns.get_loc("Efficiency B"))
+                cust_col_chart.add_series({
+                    "name": "Rev Efficiency (F3)", "categories": time_cats(),
+                    "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
+                    "fill": {"color": C_EFF_REV, "transparency": 35}, "border": {"none": True},
+                })
+
+                cust_line_chart = workbook.add_chart({"type": "line"})
+                col_avg = column_letter(df.columns.get_loc("Average Efficiency"))
+                cust_line_chart.add_series({
+                    "name": "Average Efficiency", "categories": time_cats(),
+                    "values": f"=Data!${col_avg}${first_row}:${col_avg}${chart_last}",
+                    "line": {"color": C_WHITE, "width": 2.25},
+                })
+                if min_thresh_letter:
+                    cust_line_chart.add_series({
+                        "name": f"Min Efficiency ({min_eff_pct:.0f}%)", "categories": time_cats(),
+                        "values": f"=Data!${min_thresh_letter}${first_row}:${min_thresh_letter}${chart_last}",
+                        "line": {"color": C_THRESHOLD, "width": 2, "dash_type": "dash"},
+                        "marker": {"type": "none"},
+                    })
+                cust_col_chart.combine(cust_line_chart)
+
+                if H_lc_letter:
+                    cust_lc_chart = workbook.add_chart({"type": "line"})
+                    cust_lc_chart.add_series({
+                        "name": "LC Setpoint", "categories": time_cats(),
+                        "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
+                        "fill": {"none": True},
+                        "line": {"color": C_AMBER, "width": 2, "dash_type": "dash"},
+                        "y2_axis": True,
+                    })
+                    cust_col_chart.combine(cust_lc_chart)
+
+                cust_col_chart.set_chartarea({"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
+                cust_col_chart.set_plotarea({"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
+                cust_col_chart.set_title({"name": "Customer Efficiency Report", "name_font": {"color": C_RED, "size": 16, "bold": True}})
+                cust_col_chart.set_x_axis({
+                    "name": "Time Index", "name_font": {"color": C_WHITE},
+                    "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE},
+                })
+                cust_col_chart.set_y_axis({
+                    "name": "Efficiency %", "name_font": {"color": C_WHITE},
+                    "num_font": {"color": C_WHITE}, "min": 0, "max": 1.1,
+                    "num_format": "0%", "major_gridlines": {"visible": True, "line": {"color": C_GRIDLINE}},
+                    "line": {"color": C_WHITE},
+                })
+                cust_col_chart.set_y2_axis({
+                    "name": "LC Setpoint (PSI)", "name_font": {"color": C_WHITE},
+                    "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE},
+                    "min": 0, "max": 3500, "visible": True,
+                })
+                cust_col_chart.set_legend({"position": "bottom", "font": {"color": C_WHITE}})
+
+                cust_chartsheet = workbook.add_chartsheet("Customer Report")
+                cust_chartsheet.set_chart(cust_col_chart)
 
         return excel_file
     except Exception as e:

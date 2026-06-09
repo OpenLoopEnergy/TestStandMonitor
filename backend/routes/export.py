@@ -46,7 +46,7 @@ def _get_setting(db: Session, key: str) -> str:
 @router.post("/export_data")
 def export_data(db: Session = Depends(get_db)):
     # Fetch header metadata
-    all_header_fields = HEADER_FIELDS_TOP + HEADER_FIELDS_BOTTOM
+    all_header_fields = HEADER_FIELDS_TOP + HEADER_FIELDS_BOTTOM + [("minEfficiencyPct", "Min Efficiency %")]
     headers = {field_key: _get_setting(db, field_key) for field_key, _ in all_header_fields}
 
     # Fetch all logged rows (no limit — full test run)
@@ -72,6 +72,12 @@ def export_data(db: Session = Depends(get_db)):
         writer.writerow(["Direction Switch", _DIR_SWITCH_LABELS.get(dir_val, str(dir_val))])
         for field_key, display_name in HEADER_FIELDS_BOTTOM:
             writer.writerow([display_name, headers.get(field_key, "N/A")])
+        min_eff = headers.get("minEfficiencyPct", "")
+        if min_eff and min_eff not in ("N/A", ""):
+            try:
+                writer.writerow(["Min Efficiency %", float(min_eff)])
+            except ValueError:
+                pass
 
         writer.writerow([])  # Blank separator
 

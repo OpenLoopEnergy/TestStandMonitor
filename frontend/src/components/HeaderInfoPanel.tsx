@@ -42,6 +42,9 @@ export function HeaderInfoPanel({ onInputFactorChange, isAdmin = false }: Props)
           serialNumber: parseInt(draft.serialNumber ?? '0', 10),
           employeeId: parseInt(draft.employeeId ?? '0', 10),
           customerId: parseInt(draft.customerId ?? '0', 10),
+          minEfficiencyPct: draft.minEfficiencyPct && draft.minEfficiencyPct !== ''
+            ? parseFloat(draft.minEfficiencyPct)
+            : null,
         }),
       })
       if (!res.ok) throw new Error(await res.text())
@@ -113,6 +116,7 @@ export function HeaderInfoPanel({ onInputFactorChange, isAdmin = false }: Props)
         {field('Serial #', 'serialNumber', 'number')}
         {field('Employee ID', 'employeeId', 'number')}
         {field('Customer ID', 'customerId', 'number')}
+        {field('Min Eff %', 'minEfficiencyPct', 'number')}
       </div>
 
       {toast && (

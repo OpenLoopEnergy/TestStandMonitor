@@ -129,6 +129,7 @@ export interface HeaderData {
   serialNumber?: string
   employeeId?: string
   customerId?: string
+  minEfficiencyPct?: string
 }
 
 /** A row from the data log table. */

@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -24,6 +25,7 @@ class HeaderData(BaseModel):
     serialNumber: int
     employeeId: int
     customerId: int
+    minEfficiencyPct: Optional[float] = None
 
 
 @router.get("/get_header_data")
@@ -39,11 +41,12 @@ def update_header_data(data: HeaderData, db: Session = Depends(get_db)):
 
     updates = data.model_dump()
     for key, value in updates.items():
+        str_value = "" if value is None else str(value)
         row = db.query(AppSettings).filter(AppSettings.key == key).first()
         if row:
-            row.value = str(value)
+            row.value = str_value
         else:
-            db.add(AppSettings(key=key, value=str(value)))
+            db.add(AppSettings(key=key, value=str_value))
 
     db.commit()
     return {"status": "success"}

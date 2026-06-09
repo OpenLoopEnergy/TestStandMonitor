@@ -24,14 +24,15 @@ def get_db():
 
 
 _DEFAULT_SETTINGS = {
-    "programName":    "",
-    "description":    "",
-    "compSet":        "0",
-    "inputFactor":    "11",
-    "inputFactorType":"cu/in",
-    "serialNumber":   "0",
-    "employeeId":     "0",
-    "customerId":     "0",
+    "programName":      "",
+    "description":      "",
+    "compSet":          "0",
+    "inputFactor":      "11",
+    "inputFactorType":  "cu/in",
+    "serialNumber":     "0",
+    "employeeId":       "0",
+    "customerId":       "0",
+    "minEfficiencyPct": "",
 }
 
 
