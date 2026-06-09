@@ -148,10 +148,11 @@ def process_csv_to_excel_from_file(file_path):
             df["Efficiency A"] = df.apply(eff_a_formula, axis=1)
             df["Efficiency B"] = df.apply(eff_b_formula, axis=1)
 
-            # 4. Average Efficiency (Continuous Average of raw sensors)
+            # 4. Average Efficiency — omit values below 80% to filter outliers
             def eff_avg_formula(row):
                 rn = row.name + offset + 2
-                return f'=IFERROR(AVERAGE(${W1_L}{rn},${W3_L}{rn}),NA())'
+                return (f'=IFERROR(IF(AVERAGE(${W1_L}{rn},${W3_L}{rn})>=0.8,'
+                        f'AVERAGE(${W1_L}{rn},${W3_L}{rn}),NA()),NA())')
 
             df["Average Efficiency"] = df.apply(eff_avg_formula, axis=1)
 
@@ -193,15 +194,11 @@ def process_csv_to_excel_from_file(file_path):
                 worksheet.set_column(col_idx, col_idx, min(col_width, 40))
 
             # Apply percent formatting
-            for col in ["EffRaw_F1", "EffRaw_F3", "Efficiency A", "Efficiency B", "Average Efficiency"]:
+            for col in ["EffRaw_F1", "EffRaw_F3", "Efficiency A", "Efficiency B",
+                        "Average Efficiency", "Min Eff Threshold"]:
                 if col in df.columns:
                     idx = df.columns.get_loc(col)
                     worksheet.set_column(idx, idx, 14, percent_fmt)
-
-            # Hide the threshold helper column (chart still references it as a data source)
-            if "Min Eff Threshold" in df.columns:
-                thresh_idx = df.columns.get_loc("Min Eff Threshold")
-                worksheet.set_column(thresh_idx, thresh_idx, 0, percent_fmt)
 
             # Alternating row colors
             last_row, data_start = len(df) + offset + 1, offset + 1
@@ -304,12 +301,10 @@ def process_csv_to_excel_from_file(file_path):
                 chartsheet.set_chart(chart)
 
                 # ── Customer Report Chartsheet ───────────────────────────────
-                # Chain: col → line → area.  Each chart object is axis-pure to
-                # avoid xlsxwriter XML corruption caused by mixed primary+secondary
-                # series in the same combined chart.
-                #   col   : Fwd / Rev efficiency columns  (primary Y)
-                #   line  : Average + Min Threshold lines (primary Y)
-                #   area  : LC Setpoint                   (secondary Y only)
+                # Base chart: column for Fwd/Rev efficiency (primary Y).
+                # ONE combined area chart carries all overlay series so combine()
+                # is called only once and the XML stays valid.
+                # fill:{"none":True} makes area series render as dashed/solid lines.
                 cust_col_chart = workbook.add_chart({"type": "column"})
 
                 col_ea = column_letter(df.columns.get_loc("Efficiency A"))
@@ -325,46 +320,44 @@ def process_csv_to_excel_from_file(file_path):
                     "fill": {"color": C_EFF_REV, "transparency": 60}, "border": {"none": True},
                 })
 
-                # Primary-Y line chart: average + threshold (no y2 series here)
-                cust_line_chart = workbook.add_chart({"type": "line"})
+                # Single combined area chart: avg line (primary Y) +
+                # min threshold (primary Y) + LC Setpoint (secondary Y).
+                # Using area type matches the original Report Chart pressure overlay
+                # which is confirmed to work without XML corruption.
+                cust_overlay = workbook.add_chart({"type": "area"})
+
                 col_avg = column_letter(df.columns.get_loc("Average Efficiency"))
-                cust_line_chart.add_series({
+                cust_overlay.add_series({
                     "name": "Average Efficiency", "categories": time_cats(),
                     "values": f"=Data!${col_avg}${first_row}:${col_avg}${chart_last}",
+                    "fill": {"none": True},
                     "line": {"color": C_EFF_AVG, "width": 3},
-                    "marker": {"type": "none"},
                 })
                 if min_thresh_letter:
-                    cust_line_chart.add_series({
+                    cust_overlay.add_series({
                         "name": f"Min Efficiency ({min_eff_pct:.0f}%)", "categories": time_cats(),
                         "values": f"=Data!${min_thresh_letter}${first_row}:${min_thresh_letter}${chart_last}",
+                        "fill": {"none": True},
                         "line": {"color": C_THRESHOLD, "width": 2, "dash_type": "dash"},
-                        "marker": {"type": "none"},
                     })
-
-                cust_y2_cfg = {
-                    "name": "LC Setpoint (PSI)", "name_font": {"color": C_WHITE},
-                    "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE},
-                    "min": 0, "max": 3500, "visible": True,
-                }
-
-                # Secondary-Y area chart: LC Setpoint only (no primary series)
-                # Chained from cust_line_chart so combine() is only called once
-                # on each parent — avoids the overwrite bug.
                 if H_lc_letter:
-                    cust_lc_chart = workbook.add_chart({"type": "area"})
-                    cust_lc_chart.add_series({
+                    cust_overlay.add_series({
                         "name": "LC Setpoint", "categories": time_cats(),
                         "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
                         "fill": {"none": True},
                         "line": {"color": C_AMBER, "width": 2, "dash_type": "dash"},
                         "y2_axis": True,
                     })
-                    cust_lc_chart.set_y2_axis(cust_y2_cfg)
-                    cust_line_chart.combine(cust_lc_chart)   # line → lc (chain leaf)
-                    cust_col_chart.set_y2_axis(cust_y2_cfg)
 
-                cust_col_chart.combine(cust_line_chart)      # col → line (chain root)
+                cust_col_chart.combine(cust_overlay)
+
+                cust_y2_cfg = {
+                    "name": "LC Setpoint (PSI)", "name_font": {"color": C_WHITE},
+                    "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE},
+                    "min": 0, "max": 3500, "visible": True,
+                }
+                cust_col_chart.set_y2_axis(cust_y2_cfg)
+                cust_overlay.set_y2_axis(cust_y2_cfg)
 
                 cust_col_chart.set_chartarea({"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
                 cust_col_chart.set_plotarea({"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
