@@ -304,9 +304,12 @@ def process_csv_to_excel_from_file(file_path):
                 chartsheet.set_chart(chart)
 
                 # ── Customer Report Chartsheet ───────────────────────────────
-                # Fwd/Rev efficiency columns + avg/threshold lines + LC Setpoint.
-                # Uses a single combine() — xlsxwriter only supports one combined
-                # chart per base chart; all line series go into one combined chart.
+                # Chain: col → line → area.  Each chart object is axis-pure to
+                # avoid xlsxwriter XML corruption caused by mixed primary+secondary
+                # series in the same combined chart.
+                #   col   : Fwd / Rev efficiency columns  (primary Y)
+                #   line  : Average + Min Threshold lines (primary Y)
+                #   area  : LC Setpoint                   (secondary Y only)
                 cust_col_chart = workbook.add_chart({"type": "column"})
 
                 col_ea = column_letter(df.columns.get_loc("Efficiency A"))
@@ -322,9 +325,8 @@ def process_csv_to_excel_from_file(file_path):
                     "fill": {"color": C_EFF_REV, "transparency": 60}, "border": {"none": True},
                 })
 
-                # One combined line chart: avg + threshold (primary Y) + LC Setpoint (secondary Y)
+                # Primary-Y line chart: average + threshold (no y2 series here)
                 cust_line_chart = workbook.add_chart({"type": "line"})
-
                 col_avg = column_letter(df.columns.get_loc("Average Efficiency"))
                 cust_line_chart.add_series({
                     "name": "Average Efficiency", "categories": time_cats(),
@@ -339,16 +341,30 @@ def process_csv_to_excel_from_file(file_path):
                         "line": {"color": C_THRESHOLD, "width": 2, "dash_type": "dash"},
                         "marker": {"type": "none"},
                     })
+
+                cust_y2_cfg = {
+                    "name": "LC Setpoint (PSI)", "name_font": {"color": C_WHITE},
+                    "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE},
+                    "min": 0, "max": 3500, "visible": True,
+                }
+
+                # Secondary-Y area chart: LC Setpoint only (no primary series)
+                # Chained from cust_line_chart so combine() is only called once
+                # on each parent — avoids the overwrite bug.
                 if H_lc_letter:
-                    cust_line_chart.add_series({
+                    cust_lc_chart = workbook.add_chart({"type": "area"})
+                    cust_lc_chart.add_series({
                         "name": "LC Setpoint", "categories": time_cats(),
                         "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
                         "fill": {"none": True},
                         "line": {"color": C_AMBER, "width": 2, "dash_type": "dash"},
                         "y2_axis": True,
                     })
+                    cust_lc_chart.set_y2_axis(cust_y2_cfg)
+                    cust_line_chart.combine(cust_lc_chart)   # line → lc (chain leaf)
+                    cust_col_chart.set_y2_axis(cust_y2_cfg)
 
-                cust_col_chart.combine(cust_line_chart)
+                cust_col_chart.combine(cust_line_chart)      # col → line (chain root)
 
                 cust_col_chart.set_chartarea({"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
                 cust_col_chart.set_plotarea({"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
@@ -362,11 +378,6 @@ def process_csv_to_excel_from_file(file_path):
                     "num_font": {"color": C_WHITE}, "min": 0, "max": 1.1,
                     "num_format": "0%", "major_gridlines": {"visible": True, "line": {"color": C_GRIDLINE}},
                     "line": {"color": C_WHITE},
-                })
-                cust_col_chart.set_y2_axis({
-                    "name": "LC Setpoint (PSI)", "name_font": {"color": C_WHITE},
-                    "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE},
-                    "min": 0, "max": 3500, "visible": True,
                 })
                 cust_col_chart.set_legend({"position": "bottom", "font": {"color": C_WHITE}})
 
