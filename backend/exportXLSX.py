@@ -301,26 +301,46 @@ def process_csv_to_excel_from_file(file_path):
                 chartsheet.set_chart(chart)
 
                 # ── Customer Report Chartsheet ───────────────────────────────
-                # All-lines layout, same axis split as the Report Chart so the XML
-                # stays valid: base chart = ALL primary-Y series, combined chart =
-                # ALL secondary-Y series. Each chart is axis-pure → no corruption.
-                #   base (line) → Fwd, Rev, Avg, Min Threshold   (primary Y, %)
-                #   combine (area, fill none) → LC Setpoint       (secondary Y, PSI)
-                cust_line_chart = workbook.add_chart({"type": "line"})
+                # Columns for Fwd/Rev efficiency (clean across cycle gaps, unlike
+                # lines which sawtooth to zero). Avg + Min Threshold as lines on
+                # top so they stand out. LC Setpoint as an amber column band on the
+                # secondary Y axis.  xlsxwriter limits: ONE combine(), and the
+                # combined chart must be axis-pure — so the y1 lines (avg/threshold)
+                # are the combined chart and LC (y2) rides in the base column chart.
+                #   base (column)  → Fwd, Rev (y1) + LC Setpoint (y2)
+                #   combine (line) → Avg Efficiency + Min Threshold (y1, pure)
+                cust_col_chart = workbook.add_chart({"type": "column"})
 
                 col_ea = column_letter(df.columns.get_loc("Efficiency A"))
-                cust_line_chart.add_series({
+                cust_col_chart.add_series({
                     "name": "Fwd Efficiency (F1)", "categories": time_cats(),
                     "values": f"=Data!${col_ea}${first_row}:${col_ea}${chart_last}",
-                    "line": {"color": C_EFF_FWD, "width": 1.5},
+                    "fill": {"color": C_EFF_FWD, "transparency": 35}, "border": {"none": True},
                 })
                 col_eb = column_letter(df.columns.get_loc("Efficiency B"))
-                cust_line_chart.add_series({
+                cust_col_chart.add_series({
                     "name": "Rev Efficiency (F3)", "categories": time_cats(),
                     "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
-                    "line": {"color": C_EFF_REV, "width": 1.5},
+                    "fill": {"color": C_EFF_REV, "transparency": 35}, "border": {"none": True},
                 })
-                # Average Efficiency — dotted, thick, brightest so it stands out
+                # LC Setpoint as an amber column band on the secondary Y axis.
+                if H_lc_letter:
+                    cust_col_chart.add_series({
+                        "name": "LC Setpoint", "categories": time_cats(),
+                        "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
+                        "fill": {"color": C_AMBER, "transparency": 60}, "border": {"none": True},
+                        "y2_axis": True,
+                    })
+                    cust_y2_cfg = {
+                        "name": "LC Setpoint (PSI)", "name_font": {"color": C_WHITE},
+                        "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE},
+                        "min": 0, "max": 3500, "visible": True,
+                    }
+                    cust_col_chart.set_y2_axis(cust_y2_cfg)
+
+                # Single combine (line): avg + min threshold, both primary Y,
+                # drawn on top of the columns so they stand out.
+                cust_line_chart = workbook.add_chart({"type": "line"})
                 col_avg = column_letter(df.columns.get_loc("Average Efficiency"))
                 cust_line_chart.add_series({
                     "name": "Average Efficiency", "categories": time_cats(),
@@ -333,45 +353,25 @@ def process_csv_to_excel_from_file(file_path):
                         "values": f"=Data!${min_thresh_letter}${first_row}:${min_thresh_letter}${chart_last}",
                         "line": {"color": C_THRESHOLD, "width": 2.5, "dash_type": "dash"},
                     })
+                cust_col_chart.combine(cust_line_chart)
 
-                # Combined area chart (fill none → dashed line) on secondary Y.
-                # Same role/pattern as pressure_chart in the Report Chart.
-                cust_lc_chart = workbook.add_chart({"type": "area"})
-                if H_lc_letter:
-                    cust_lc_chart.add_series({
-                        "name": "LC Setpoint", "categories": time_cats(),
-                        "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
-                        "fill": {"none": True},
-                        "line": {"color": C_AMBER, "width": 2, "dash_type": "dash"},
-                        "y2_axis": True,
-                    })
-                cust_line_chart.combine(cust_lc_chart)
-
-                cust_y2_cfg = {
-                    "name": "LC Setpoint (PSI)", "name_font": {"color": C_WHITE},
-                    "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE},
-                    "min": 0, "max": 3500, "visible": True,
-                }
-                cust_line_chart.set_y2_axis(cust_y2_cfg)
-                cust_lc_chart.set_y2_axis(cust_y2_cfg)
-
-                cust_line_chart.set_chartarea({"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
-                cust_line_chart.set_plotarea({"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
-                cust_line_chart.set_title({"name": "Customer Efficiency Report", "name_font": {"color": C_RED, "size": 16, "bold": True}})
-                cust_line_chart.set_x_axis({
+                cust_col_chart.set_chartarea({"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
+                cust_col_chart.set_plotarea({"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
+                cust_col_chart.set_title({"name": "Customer Efficiency Report", "name_font": {"color": C_RED, "size": 16, "bold": True}})
+                cust_col_chart.set_x_axis({
                     "name": "Time Index", "name_font": {"color": C_WHITE},
                     "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE},
                 })
-                cust_line_chart.set_y_axis({
+                cust_col_chart.set_y_axis({
                     "name": "Efficiency %", "name_font": {"color": C_WHITE},
                     "num_font": {"color": C_WHITE}, "min": 0, "max": 1.1,
                     "num_format": "0%", "major_gridlines": {"visible": True, "line": {"color": C_GRIDLINE}},
                     "line": {"color": C_WHITE},
                 })
-                cust_line_chart.set_legend({"position": "bottom", "font": {"color": C_WHITE}})
+                cust_col_chart.set_legend({"position": "bottom", "font": {"color": C_WHITE}})
 
                 cust_chartsheet = workbook.add_chartsheet("Customer Report")
-                cust_chartsheet.set_chart(cust_line_chart)
+                cust_chartsheet.set_chart(cust_col_chart)
 
         return excel_file
     except Exception as e:
