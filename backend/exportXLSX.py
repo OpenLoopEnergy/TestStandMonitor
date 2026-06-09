@@ -301,11 +301,13 @@ def process_csv_to_excel_from_file(file_path):
                 chartsheet.set_chart(chart)
 
                 # ── Customer Report Chartsheet ───────────────────────────────
-                # Mirrors the Report Chart pattern exactly:
-                #   base (column)  → Fwd + Rev efficiency
-                #   combine 1 (line) → Avg Efficiency + Min Threshold  (primary Y)
-                #   combine 2 (area) → LC Setpoint only                (secondary Y)
-                # Same line→area ordering that makes the Report Chart work.
+                # xlsxwriter honors only ONE combine() and the combined chart must
+                # be axis-pure (mixing y1+y2 there corrupts the file). The base
+                # chart draws behind, the combined chart draws on top.
+                # So the IMPORTANT lines (avg + threshold) go in the combined chart
+                # (on top, prominent) and LC Setpoint (y2) lives in the base chart.
+                #   base (column)   → Fwd + Rev efficiency (y1) + LC Setpoint (y2)
+                #   combine (line)  → Avg Efficiency + Min Threshold (y1, pure)
                 cust_col_chart = workbook.add_chart({"type": "column"})
 
                 col_ea = column_letter(df.columns.get_loc("Efficiency A"))
@@ -320,43 +322,38 @@ def process_csv_to_excel_from_file(file_path):
                     "values": f"=Data!${col_eb}${first_row}:${col_eb}${chart_last}",
                     "fill": {"color": C_EFF_REV, "transparency": 35}, "border": {"none": True},
                 })
+                # LC Setpoint on secondary Y, in the BASE chart so the combined
+                # chart stays axis-pure. Renders as a faint amber background band.
+                if H_lc_letter:
+                    cust_col_chart.add_series({
+                        "name": "LC Setpoint", "categories": time_cats(),
+                        "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
+                        "fill": {"color": C_AMBER, "transparency": 80}, "border": {"none": True},
+                        "y2_axis": True,
+                    })
+                    cust_y2_cfg = {
+                        "name": "LC Setpoint (PSI)", "name_font": {"color": C_WHITE},
+                        "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE},
+                        "min": 0, "max": 3500, "visible": True,
+                    }
+                    cust_col_chart.set_y2_axis(cust_y2_cfg)
 
-                # Combine 1 (line): avg + min threshold on primary Y
+                # Single combine (line): avg + min threshold, both primary Y.
+                # Drawn on top of the columns so they stand out.
                 cust_line_chart = workbook.add_chart({"type": "line"})
                 col_avg = column_letter(df.columns.get_loc("Average Efficiency"))
                 cust_line_chart.add_series({
                     "name": "Average Efficiency", "categories": time_cats(),
                     "values": f"=Data!${col_avg}${first_row}:${col_avg}${chart_last}",
-                    "line": {"color": C_EFF_AVG, "width": 2.25},
+                    "line": {"color": C_EFF_AVG, "width": 3.25},
                 })
                 if min_thresh_letter:
                     cust_line_chart.add_series({
                         "name": f"Min Efficiency ({min_eff_pct:.0f}%)", "categories": time_cats(),
                         "values": f"=Data!${min_thresh_letter}${first_row}:${min_thresh_letter}${chart_last}",
-                        "line": {"color": C_THRESHOLD, "width": 2, "dash_type": "dash"},
+                        "line": {"color": C_THRESHOLD, "width": 2.5, "dash_type": "dash"},
                     })
                 cust_col_chart.combine(cust_line_chart)
-
-                # Combine 2 (area): LC Setpoint on secondary Y — same role as
-                # pressure_chart in Report Chart but with only one series
-                cust_lc_chart = workbook.add_chart({"type": "area"})
-                if H_lc_letter:
-                    cust_lc_chart.add_series({
-                        "name": "LC Setpoint", "categories": time_cats(),
-                        "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
-                        "fill": {"none": True},
-                        "line": {"color": C_AMBER, "width": 2, "dash_type": "dash"},
-                        "y2_axis": True,
-                    })
-                cust_col_chart.combine(cust_lc_chart)
-
-                cust_y2_cfg = {
-                    "name": "LC Setpoint (PSI)", "name_font": {"color": C_WHITE},
-                    "num_font": {"color": C_WHITE}, "line": {"color": C_WHITE},
-                    "min": 0, "max": 3500, "visible": True,
-                }
-                cust_col_chart.set_y2_axis(cust_y2_cfg)
-                cust_lc_chart.set_y2_axis(cust_y2_cfg)
 
                 cust_col_chart.set_chartarea({"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
                 cust_col_chart.set_plotarea({"fill": {"color": C_PLOT_BG}, "border": {"none": True}})
