@@ -160,29 +160,35 @@ def process_csv_to_excel_from_file(file_path):
             # can never evaluate to #N/A (Excel AGGREGATE over the formula-driven
             # Average Efficiency column did not behave reliably). Mirrors the
             # Average Efficiency math, then a centered 7-point moving average that
-            # skips the gaps. Used by the customer chart for a clean trend.
-            input_factor_val = 11.0
-            for r in metadata:
-                if r and str(r[0]).strip() == "Input Factor":
-                    try:
-                        input_factor_val = float(r[1])
-                    except (ValueError, IndexError, TypeError):
-                        pass
-                    break
+            # skips the gaps. Falls back to the raw formula column on any error so
+            # the export never fails because of smoothing.
+            try:
+                input_factor_val = 11.0
+                for r in metadata:
+                    if r and str(r[0]).strip() == "Input Factor":
+                        try:
+                            input_factor_val = float(r[1])
+                        except (ValueError, IndexError, TypeError):
+                            pass
+                        break
 
-            s1_num = pd.to_numeric(df["S1"], errors="coerce")
-            f1_num = pd.to_numeric(df["F1"], errors="coerce")
-            f3_num = pd.to_numeric(df["F3"], errors="coerce")
-            if is_cu_in:
-                theo_num = input_factor_val * s1_num / 231.0
-            else:
-                theo_num = input_factor_val * s1_num * 0.0002642
-            e1 = (f1_num / theo_num).where((f1_num > 1) & (theo_num > 0))
-            e3 = (f3_num / theo_num).where((f3_num > 1) & (theo_num > 0))
-            avg_eff = pd.concat([e1, e3], axis=1).mean(axis=1)   # skips NaN
-            avg_eff = avg_eff.where(avg_eff >= 0.8)              # drop <80% outliers
-            df["Avg Eff (Smooth)"] = avg_eff.rolling(
-                window=7, center=True, min_periods=1).mean()
+                s1_num = pd.to_numeric(df["S1"], errors="coerce")
+                f1_num = pd.to_numeric(df["F1"], errors="coerce")
+                f3_num = pd.to_numeric(df["F3"], errors="coerce")
+                if is_cu_in:
+                    theo_num = input_factor_val * s1_num / 231.0
+                else:
+                    theo_num = input_factor_val * s1_num * 0.0002642
+                e1 = (f1_num / theo_num).where((f1_num > 1) & (theo_num > 0))
+                e3 = (f3_num / theo_num).where((f3_num > 1) & (theo_num > 0))
+                # build the pair via .values so Series names/index can't interfere
+                pair = pd.DataFrame({"e1": e1.to_numpy(), "e3": e3.to_numpy()})
+                avg_eff = pair.mean(axis=1)                          # skips NaN
+                avg_eff = avg_eff.where(avg_eff >= 0.8)              # drop <80% outliers
+                smooth = avg_eff.rolling(window=7, center=True, min_periods=1).mean()
+                df["Avg Eff (Smooth)"] = smooth.to_numpy()
+            except Exception:
+                df["Avg Eff (Smooth)"] = df["Average Efficiency"]
 
         # 5. Min Efficiency Threshold (constant column when provided)
         min_thresh_letter = None
@@ -214,11 +220,12 @@ def process_csv_to_excel_from_file(file_path):
             for row_idx, row_data in enumerate(metadata):
                 if row_data: worksheet.write(row_idx, 0, row_data[0], meta_key_fmt)
 
-            # Deep Auto-fit
+            # Deep Auto-fit — str() everything so a stray float/NaN can't break len()
             df_str = df.astype(str)
             for col_idx, col_name in enumerate(df.columns):
-                max_data_len = df_str[col_name].map(len).max() if len(df) > 0 else 0
-                col_width = max(len(col_name), max_data_len) + 2
+                series = df_str.iloc[:, col_idx]
+                max_data_len = series.map(lambda v: len(str(v))).max() if len(df) > 0 else 0
+                col_width = max(len(str(col_name)), int(max_data_len or 0)) + 2
                 worksheet.set_column(col_idx, col_idx, min(col_width, 40))
 
             # Apply percent formatting
