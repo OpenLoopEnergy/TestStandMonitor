@@ -336,7 +336,7 @@ def process_csv_to_excel_from_file(file_path):
                     press_chart.add_series({
                         "name": "LC Setpoint", "categories": time_cats(),
                         "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
-                        "line": {"color": C_WHITE, "width": 1.5, "dash_type": "dash"},
+                        "line": {"color": C_AMBER, "width": 1.75, "dash_type": "dash"},
                     })
                 press_chart.set_y_axis({
                     "name": "Pressure (PSI)", "name_font": {"color": C_WHITE},
@@ -366,7 +366,8 @@ def process_csv_to_excel_from_file(file_path):
                 eff_line_chart.add_series({
                     "name": "Average Efficiency", "categories": time_cats(),
                     "values": f"=Data!${col_avg}${first_row}:${col_avg}${chart_last}",
-                    "line": {"color": C_EFF_AVG, "width": 3, "dash_type": "round_dot"},
+                    "line": {"color": C_EFF_AVG, "width": 3},
+                    "smooth": True,
                 })
                 if min_thresh_letter:
                     eff_line_chart.add_series({
