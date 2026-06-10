@@ -156,19 +156,33 @@ def process_csv_to_excel_from_file(file_path):
 
             df["Average Efficiency"] = df.apply(eff_avg_formula, axis=1)
 
-            # 4b. Smoothed Average — centered moving average that ignores the
-            # NA() gaps (AGGREGATE func 1=AVERAGE, option 6=ignore errors).
-            # Used by the customer chart so the trend reads cleanly, not noisy.
-            avg_L = column_letter(df.columns.get_loc("Average Efficiency"))
-            data_first, data_last = offset + 2, len(df) + offset + 1
-            half_win = 3  # ±3 rows → 7-point window
-            def eff_avg_smooth_formula(row):
-                rn = row.name + offset + 2
-                lo = max(rn - half_win, data_first)
-                hi = min(rn + half_win, data_last)
-                return f'=IFERROR(AGGREGATE(1,6,${avg_L}${lo}:${avg_L}${hi}),NA())'
+            # 4b. Smoothed Average — computed in Python as STATIC values so it
+            # can never evaluate to #N/A (Excel AGGREGATE over the formula-driven
+            # Average Efficiency column did not behave reliably). Mirrors the
+            # Average Efficiency math, then a centered 7-point moving average that
+            # skips the gaps. Used by the customer chart for a clean trend.
+            input_factor_val = 11.0
+            for r in metadata:
+                if r and str(r[0]).strip() == "Input Factor":
+                    try:
+                        input_factor_val = float(r[1])
+                    except (ValueError, IndexError, TypeError):
+                        pass
+                    break
 
-            df["Avg Eff (Smooth)"] = df.apply(eff_avg_smooth_formula, axis=1)
+            s1_num = pd.to_numeric(df["S1"], errors="coerce")
+            f1_num = pd.to_numeric(df["F1"], errors="coerce")
+            f3_num = pd.to_numeric(df["F3"], errors="coerce")
+            if is_cu_in:
+                theo_num = input_factor_val * s1_num / 231.0
+            else:
+                theo_num = input_factor_val * s1_num * 0.0002642
+            e1 = (f1_num / theo_num).where((f1_num > 1) & (theo_num > 0))
+            e3 = (f3_num / theo_num).where((f3_num > 1) & (theo_num > 0))
+            avg_eff = pd.concat([e1, e3], axis=1).mean(axis=1)   # skips NaN
+            avg_eff = avg_eff.where(avg_eff >= 0.8)              # drop <80% outliers
+            df["Avg Eff (Smooth)"] = avg_eff.rolling(
+                window=7, center=True, min_periods=1).mean()
 
         # 5. Min Efficiency Threshold (constant column when provided)
         min_thresh_letter = None
