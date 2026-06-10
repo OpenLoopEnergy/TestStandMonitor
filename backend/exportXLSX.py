@@ -185,7 +185,9 @@ def process_csv_to_excel_from_file(file_path):
                 pair = pd.DataFrame({"e1": e1.to_numpy(), "e3": e3.to_numpy()})
                 avg_eff = pair.mean(axis=1)                          # skips NaN
                 avg_eff = avg_eff.where(avg_eff >= 0.8)              # drop <80% outliers
-                smooth = avg_eff.rolling(window=7, center=True, min_periods=1).mean()
+                # Wide centered window blends many fwd+rev cycles → a stable,
+                # slowly-varying trend instead of tracking each individual cycle.
+                smooth = avg_eff.rolling(window=25, center=True, min_periods=1).mean()
                 df["Avg Eff (Smooth)"] = smooth.to_numpy()
             except Exception:
                 df["Avg Eff (Smooth)"] = df["Average Efficiency"]
@@ -411,6 +413,10 @@ def process_csv_to_excel_from_file(file_path):
                         "line": {"color": C_THRESHOLD, "width": 2.5, "dash_type": "dash"},
                     })
                 eff_chart.combine(eff_line_chart)
+                # Connect the Average line across any blank cells so it reads as one
+                # continuous trend instead of disconnected segments.
+                eff_chart.show_blanks_as("span")
+                eff_line_chart.show_blanks_as("span")
                 eff_chart.set_y_axis({
                     "name": "Efficiency %", "name_font": {"color": C_WHITE},
                     "num_font": {"color": C_WHITE}, "min": 0, "max": 1.1,
