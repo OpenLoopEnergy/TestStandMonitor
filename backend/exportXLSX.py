@@ -156,6 +156,20 @@ def process_csv_to_excel_from_file(file_path):
 
             df["Average Efficiency"] = df.apply(eff_avg_formula, axis=1)
 
+            # 4b. Smoothed Average — centered moving average that ignores the
+            # NA() gaps (AGGREGATE func 1=AVERAGE, option 6=ignore errors).
+            # Used by the customer chart so the trend reads cleanly, not noisy.
+            avg_L = column_letter(df.columns.get_loc("Average Efficiency"))
+            data_first, data_last = offset + 2, len(df) + offset + 1
+            half_win = 3  # ±3 rows → 7-point window
+            def eff_avg_smooth_formula(row):
+                rn = row.name + offset + 2
+                lo = max(rn - half_win, data_first)
+                hi = min(rn + half_win, data_last)
+                return f'=IFERROR(AGGREGATE(1,6,${avg_L}${lo}:${avg_L}${hi}),NA())'
+
+            df["Avg Eff (Smooth)"] = df.apply(eff_avg_smooth_formula, axis=1)
+
         # 5. Min Efficiency Threshold (constant column when provided)
         min_thresh_letter = None
         if min_eff_pct is not None and min_eff_pct > 0:
@@ -195,7 +209,7 @@ def process_csv_to_excel_from_file(file_path):
 
             # Apply percent formatting
             for col in ["EffRaw_F1", "EffRaw_F3", "Efficiency A", "Efficiency B",
-                        "Average Efficiency", "Min Eff Threshold"]:
+                        "Average Efficiency", "Avg Eff (Smooth)", "Min Eff Threshold"]:
                 if col in df.columns:
                     idx = df.columns.get_loc(col)
                     worksheet.set_column(idx, idx, 14, percent_fmt)
@@ -362,7 +376,7 @@ def process_csv_to_excel_from_file(file_path):
                     "fill": {"color": C_EFF_REV, "transparency": 35}, "border": {"none": True},
                 })
                 eff_line_chart = workbook.add_chart({"type": "line"})
-                col_avg = column_letter(df.columns.get_loc("Average Efficiency"))
+                col_avg = column_letter(df.columns.get_loc("Avg Eff (Smooth)"))
                 eff_line_chart.add_series({
                     "name": "Average Efficiency", "categories": time_cats(),
                     "values": f"=Data!${col_avg}${first_row}:${col_avg}${chart_last}",
