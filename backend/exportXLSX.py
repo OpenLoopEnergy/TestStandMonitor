@@ -193,10 +193,17 @@ def process_csv_to_excel_from_file(file_path):
                 df["Avg Eff (Smooth)"] = df["Average Efficiency"]
 
         # 5. Min Efficiency Threshold (constant column when provided)
+        # min_thresh_letter — on the % axis (0..1.1), used by the Customer chart.
+        # min_thresh_psi_letter — same threshold scaled onto the Report Chart's
+        # secondary PSI axis (0..3500) so it lines up at the right height there,
+        # since that chart's only line-capable slot is the secondary axis.
         min_thresh_letter = None
+        min_thresh_psi_letter = None
         if min_eff_pct is not None and min_eff_pct > 0:
             df["Min Eff Threshold"] = min_eff_pct / 100.0
             min_thresh_letter = column_letter(df.columns.get_loc("Min Eff Threshold"))
+            df["Min Eff Thresh PSI"] = (min_eff_pct / 100.0) / 1.1 * 3500
+            min_thresh_psi_letter = column_letter(df.columns.get_loc("Min Eff Thresh PSI"))
 
         # --- Excel Export ---
         timestamp = get_export_now().strftime("%m-%d-%Y_%I-%M-%S_%p")
@@ -301,6 +308,16 @@ def process_csv_to_excel_from_file(file_path):
                         "values": f"=Data!${H_lc_letter}${first_row}:${H_lc_letter}${chart_last}",
                         "fill": {"none": True},
                         "line": {"color": C_AMBER, "width": 2, "dash_type": "dash"},
+                        "y2_axis": True,
+                    })
+                # Min Efficiency threshold — plotted on the secondary (PSI) axis at
+                # the height that matches the % left axis, so it reads as a 93% line.
+                if min_thresh_psi_letter:
+                    pressure_chart.add_series({
+                        "name": f"Min Efficiency ({min_eff_pct:.0f}%)", "categories": time_cats(),
+                        "values": f"=Data!${min_thresh_psi_letter}${first_row}:${min_thresh_psi_letter}${chart_last}",
+                        "fill": {"none": True},
+                        "line": {"color": C_THRESHOLD, "width": 2, "dash_type": "dash"},
                         "y2_axis": True,
                     })
                 chart.combine(pressure_chart)
