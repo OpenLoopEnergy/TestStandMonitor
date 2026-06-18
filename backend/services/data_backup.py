@@ -74,3 +74,19 @@ def load_backup_payload(backup: DataBackup) -> tuple[list[dict], dict, object]:
     headers = metadata.get("headers", {})
     dir_switch_val = metadata.get("ee_dir_switch", 0)
     return row_dicts, headers, dir_switch_val
+
+
+def load_backup_headers(backup: DataBackup) -> dict:
+    """Parse just the header snapshot (no row decompression) for listing/editing."""
+    metadata = json.loads(backup.metadata_json) if backup.metadata_json else {}
+    return metadata.get("headers", {})
+
+
+def update_backup_headers(db: Session, backup: DataBackup, new_headers: dict) -> dict:
+    """Merge edited header fields into a backup's metadata snapshot. Caller-safe commit."""
+    metadata = json.loads(backup.metadata_json) if backup.metadata_json else {}
+    merged = {**metadata.get("headers", {}), **new_headers}
+    metadata["headers"] = merged
+    backup.metadata_json = json.dumps(metadata)
+    db.commit()
+    return merged

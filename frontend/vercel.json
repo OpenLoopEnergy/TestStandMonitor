@@ -16,6 +16,7 @@
     { "source": "/clear_debug_table",     "destination": "https://web-production-4e718.up.railway.app/clear_debug_table" },
     { "source": "/rename_file",           "destination": "https://web-production-4e718.up.railway.app/rename_file" },
     { "source": "/data_backups",          "destination": "https://web-production-4e718.up.railway.app/data_backups" },
+    { "source": "/update_backup_headers/:id", "destination": "https://web-production-4e718.up.railway.app/update_backup_headers/:id" },
     { "source": "/export_backup/:id",     "destination": "https://web-production-4e718.up.railway.app/export_backup/:id" },
     { "source": "/rename_backup/:id",     "destination": "https://web-production-4e718.up.railway.app/rename_backup/:id" },
     { "source": "/delete_backup/:id",     "destination": "https://web-production-4e718.up.railway.app/delete_backup/:id" },

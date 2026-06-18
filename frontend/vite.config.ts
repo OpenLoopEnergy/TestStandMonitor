@@ -21,6 +21,7 @@ export default defineConfig({
       '/clear_': 'http://localhost:8000',
       '/past_tests': 'http://localhost:8000',
       '/data_backups': 'http://localhost:8000',
+      '/update_backup_headers': 'http://localhost:8000',
       '/rename_backup': 'http://localhost:8000',
       '/delete_backup': 'http://localhost:8000',
       '/download_test': 'http://localhost:8000',

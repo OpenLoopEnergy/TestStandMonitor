@@ -14,7 +14,21 @@ interface BackupInfo {
   row_count: number
   first_logged_at: string | null
   last_logged_at: string | null
+  headers: Record<string, string>
 }
+
+// Header fields baked into the export, snapshotted on clear and editable per backup.
+const HEADER_FIELDS: [string, string][] = [
+  ['programName', 'Program Name'],
+  ['description', 'Description'],
+  ['employeeId', 'Employee ID'],
+  ['compSet', 'Comp Set'],
+  ['inputFactor', 'Input Factor'],
+  ['inputFactorType', 'Input Factor Type'],
+  ['serialNumber', 'Serial Number'],
+  ['customerId', 'Customer ID'],
+  ['minEfficiencyPct', 'Min Efficiency %'],
+]
 
 interface FileTableProps {
   items: FileInfo[]
@@ -127,6 +141,7 @@ interface BackupTableProps {
   onCancelRename: () => void
   onConfirmRename: (id: number, label: string) => void
   onReexport: (backup: BackupInfo) => void
+  onEditHeaders: (backup: BackupInfo) => void
   onDelete: (backup: BackupInfo) => void
 }
 
@@ -147,6 +162,7 @@ function BackupTable({
   onCancelRename,
   onConfirmRename,
   onReexport,
+  onEditHeaders,
   onDelete,
 }: BackupTableProps) {
   if (items.length === 0) {
@@ -216,6 +232,13 @@ function BackupTable({
                 {reexportingId === b.id ? 'Exporting…' : '⟳ Re-export'}
               </button>
               <button
+                onClick={() => onEditHeaders(b)}
+                className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white"
+                title="Edit header info (input factor, program name, etc.)"
+              >
+                ⚙ Info
+              </button>
+              <button
                 onClick={() => onStartRename(b)}
                 className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white"
                 title="Rename"
@@ -246,6 +269,9 @@ export default function PastTests() {
   const [renamingBackupId, setRenamingBackupId] = useState<number | null>(null)
   const [backupRenameValue, setBackupRenameValue] = useState('')
   const [reexportingId, setReexportingId] = useState<number | null>(null)
+  const [editingBackup, setEditingBackup] = useState<BackupInfo | null>(null)
+  const [headerDraft, setHeaderDraft] = useState<Record<string, string>>({})
+  const [savingHeaders, setSavingHeaders] = useState(false)
 
   function loadFiles() {
     fetch('/past_tests')
@@ -339,6 +365,35 @@ export default function PastTests() {
     }
   }
 
+  function openHeaderEditor(backup: BackupInfo) {
+    setEditingBackup(backup)
+    // Prefill from the snapshot, ensuring every field has a string value to edit.
+    const draft: Record<string, string> = {}
+    for (const [key] of HEADER_FIELDS) draft[key] = backup.headers?.[key] ?? ''
+    setHeaderDraft(draft)
+  }
+
+  async function saveHeaders() {
+    if (!editingBackup) return
+    setSavingHeaders(true)
+    try {
+      const res = await fetch(`/update_backup_headers/${editingBackup.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ headers: headerDraft }),
+      })
+      if (!res.ok) throw new Error('save failed')
+      const data = await res.json()
+      setBackups(bs => bs.map(b => b.id === editingBackup.id ? { ...b, headers: data.headers } : b))
+      setEditingBackup(null)
+      showToast('success', 'Header info updated.')
+    } catch {
+      showToast('error', 'Failed to update header info.')
+    } finally {
+      setSavingHeaders(false)
+    }
+  }
+
   async function deleteBackup(backup: BackupInfo) {
     if (!confirm(`Delete backup "${backup.label}"? This permanently removes its raw data.`)) return
     const res = await fetch(`/delete_backup/${backup.id}`, { method: 'DELETE' })
@@ -369,6 +424,7 @@ export default function PastTests() {
     onCancelRename: () => setRenamingBackupId(null),
     onConfirmRename: renameBackup,
     onReexport: reexportBackup,
+    onEditHeaders: openHeaderEditor,
     onDelete: deleteBackup,
   }
 
@@ -421,6 +477,55 @@ export default function PastTests() {
           }
         </div>
       </div>
+
+      {editingBackup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 max-w-lg w-full shadow-2xl dark:bg-[#232323] dark:border-white/10">
+            <h2 className="text-base font-bold mb-1 text-gray-900 dark:text-white">Edit Header Info</h2>
+            <p className="text-xs text-gray-500 mb-4">
+              These values were snapshotted when the table was cleared. Edit them to correct a
+              re-export — e.g. the Input Factor used for this test.
+            </p>
+            <div className="grid grid-cols-2 gap-3 max-h-[55vh] overflow-y-auto pr-1">
+              {HEADER_FIELDS.map(([key, label]) => (
+                <label key={key} className="flex flex-col gap-1 text-xs">
+                  <span className="text-gray-600 dark:text-gray-400">{label}</span>
+                  <input
+                    className="bg-black/5 border border-black/20 rounded px-2 py-1.5 text-gray-900 outline-none focus:border-red-500 dark:bg-white/10 dark:border-white/20 dark:text-white"
+                    value={headerDraft[key] ?? ''}
+                    onChange={e => setHeaderDraft(d => ({ ...d, [key]: e.target.value }))}
+                  />
+                </label>
+              ))}
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={saveHeaders}
+                disabled={savingHeaders}
+                className="flex-1 bg-red-700 hover:bg-red-600 text-white disabled:opacity-50 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+              >
+                {savingHeaders ? 'Saving…' : 'Save'}
+              </button>
+              <button
+                onClick={() => setEditingBackup(null)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reexportingId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-white border border-gray-200 rounded-2xl px-10 py-8 flex flex-col items-center gap-4 shadow-2xl dark:bg-[#232323] dark:border-white/10">
+            <div className="w-10 h-10 border-4 border-black/20 border-t-red-500 rounded-full animate-spin dark:border-white/20" />
+            <p className="text-gray-900 font-semibold text-base dark:text-white">Building Export…</p>
+            <p className="text-gray-600 text-sm dark:text-gray-400">Re-exporting backup to Excel, this may take a moment.</p>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div className={`fixed bottom-4 right-4 text-sm px-4 py-3 rounded-xl shadow-lg ${

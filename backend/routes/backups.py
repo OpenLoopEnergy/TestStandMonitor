@@ -8,7 +8,11 @@ from sqlalchemy.orm import Session
 from backend.db.database import get_db
 from backend.db.models import DataBackup
 from backend.routes.export import build_export, store_exported_file
-from backend.services.data_backup import load_backup_payload
+from backend.services.data_backup import (
+    load_backup_headers,
+    load_backup_payload,
+    update_backup_headers,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -27,10 +31,26 @@ def list_data_backups(db: Session = Depends(get_db)):
                 "row_count": b.row_count,
                 "first_logged_at": b.first_logged_at.isoformat() if b.first_logged_at else None,
                 "last_logged_at": b.last_logged_at.isoformat() if b.last_logged_at else None,
+                "headers": load_backup_headers(b),
             }
             for b in rows
         ]
     }
+
+
+class UpdateHeadersRequest(BaseModel):
+    headers: dict
+
+
+@router.post("/update_backup_headers/{backup_id}")
+def update_headers(backup_id: int, body: UpdateHeadersRequest, db: Session = Depends(get_db)):
+    """Edit the header snapshot (input factor, program name, etc.) for a backup so
+    a re-export uses corrected values rather than whatever was captured on clear."""
+    backup = db.query(DataBackup).filter(DataBackup.id == backup_id).first()
+    if not backup:
+        raise HTTPException(status_code=404, detail="Backup not found")
+    merged = update_backup_headers(db, backup, body.headers)
+    return {"headers": merged}
 
 
 @router.post("/export_backup/{backup_id}")
