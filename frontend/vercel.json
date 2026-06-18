@@ -15,6 +15,10 @@
     { "source": "/export_debug_data",     "destination": "https://web-production-4e718.up.railway.app/export_debug_data" },
     { "source": "/clear_debug_table",     "destination": "https://web-production-4e718.up.railway.app/clear_debug_table" },
     { "source": "/rename_file",           "destination": "https://web-production-4e718.up.railway.app/rename_file" },
+    { "source": "/data_backups",          "destination": "https://web-production-4e718.up.railway.app/data_backups" },
+    { "source": "/export_backup/:id",     "destination": "https://web-production-4e718.up.railway.app/export_backup/:id" },
+    { "source": "/rename_backup/:id",     "destination": "https://web-production-4e718.up.railway.app/rename_backup/:id" },
+    { "source": "/delete_backup/:id",     "destination": "https://web-production-4e718.up.railway.app/delete_backup/:id" },
     { "source": "/health",                "destination": "https://web-production-4e718.up.railway.app/health" },
     { "source": "/(.*)",                  "destination": "/index.html" }
   ]
