@@ -174,3 +174,22 @@ class ExportedFile(Base):
     filename = Column(String(500), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     file_data = Column(LargeBinary, nullable=False)
+
+
+class DataBackup(Base):
+    """Snapshot of the live data table taken right before it is cleared.
+
+    Stores the raw TestLog rows plus the metadata that was active at backup time,
+    so the data can be re-exported later using the current export logic.
+    """
+    __tablename__ = "data_backups"
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    created_at      = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    label           = Column(String(500), nullable=False)   # auto-named, renamable
+    trigger         = Column(String(50))                    # "manual" | "auto"
+    row_count       = Column(Integer, nullable=False)
+    first_logged_at = Column(DateTime(timezone=True), nullable=True)
+    last_logged_at  = Column(DateTime(timezone=True), nullable=True)
+    metadata_json   = Column(Text)          # AppSettings snapshot + ee_dir_switch, as JSON
+    rows_json       = Column(LargeBinary)   # gzipped JSON of the raw TestLog rows

@@ -146,9 +146,9 @@ export default function Dashboard() {
     })
   }
 
-  const doClear = useCallback(async () => {
+  const doClear = useCallback(async (trigger: 'manual' | 'auto' = 'manual') => {
     try {
-      await fetch('/clear_data_table', { method: 'POST' })
+      await fetch(`/clear_data_table?trigger=${trigger}`, { method: 'POST' })
       setLogRows([])
       showToast('success', 'Data table cleared.')
     } catch {
@@ -179,7 +179,7 @@ export default function Dashboard() {
         if (prev <= 1) {
           clearInterval(countdownRef.current!)
           setShowClearModal(false)
-          doClear()
+          doClear('auto')
           return 0
         }
         return prev - 1
@@ -250,8 +250,8 @@ export default function Dashboard() {
   }
 
   async function handleClear() {
-    if (!confirm('Clear the data table? This cannot be undone.')) return
-    await doClear()
+    if (!confirm('Clear the data table? A backup is saved to Past Tests before clearing.')) return
+    await doClear('manual')
   }
 
   function signalHistory(): SignalPoint[] {
@@ -300,7 +300,7 @@ export default function Dashboard() {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => { setShowClearModal(false); doClear() }}
+                onClick={() => { setShowClearModal(false); doClear('auto') }}
                 className="flex-1 bg-red-700 hover:bg-red-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
               >
                 Clear Data Table Now

@@ -15,7 +15,7 @@ from backend.db.database import init_db
 from backend.services import data_store
 from backend.services.csv_logger import run_logger
 from backend.services.debug_logger import run_debug_logger
-from backend.routes import data, settings, export, files, debug_export
+from backend.routes import data, settings, export, files, debug_export, backups
 
 logging.basicConfig(
     level=logging.INFO,
@@ -70,6 +70,7 @@ app.include_router(data.router)
 app.include_router(settings.router)
 app.include_router(export.router)
 app.include_router(files.router)
+app.include_router(backups.router)
 app.include_router(debug_export.router)
 
 
