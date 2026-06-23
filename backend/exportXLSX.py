@@ -69,6 +69,15 @@ def process_csv_to_excel_from_file(file_path):
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
 
+        # Drop the rows the operators previously removed by hand: LCSetpoint == 0
+        # (column H) and Trending == 0 (column V). Reset the index afterwards so
+        # the row-number math in the formula/chart builders below stays sequential.
+        if "LCSetpoint" in df.columns:
+            df = df[df["LCSetpoint"] != 0]
+        if "Trending" in df.columns:
+            df = df[df["Trending"] != 0]
+        df = df.reset_index(drop=True)
+
         def column_letter(idx: int) -> str:
             letter = ""
             while idx >= 0:
