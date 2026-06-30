@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect } from 'react'
 import { useLiveData } from '../hooks/useLiveData'
 import { ThemeToggle } from '../components/ThemeToggle'
 
@@ -48,34 +48,12 @@ export default function CanInspector() {
   const { data, connected, piConnected } = useLiveData()
   const canRaw = data.can_raw ?? {}
 
-  // Track previous bytes per ID so we can flash a byte/bit when it changes.
-  const prev = useRef<Record<string, number[]>>({})
-  const [changedAt, setChangedAt] = useState<Record<string, number>>({}) // `${id}-${byte}` → timestamp
-
-  useEffect(() => {
-    const now = Date.now()
-    const updates: Record<string, number> = {}
-    for (const [id, bytes] of Object.entries(canRaw)) {
-      const before = prev.current[id]
-      if (before) {
-        bytes.forEach((v, i) => {
-          if (before[i] !== v) updates[`${id}-${i}`] = now
-        })
-      }
-      prev.current[id] = bytes
-    }
-    if (Object.keys(updates).length) {
-      setChangedAt(c => ({ ...c, ...updates }))
-    }
-  }, [canRaw])
-
   const ids = Object.keys(canRaw).sort()
   const digin = canRaw[DIGIN_ID]
 
-  function flashing(id: string, byteIdx: number): boolean {
-    const t = changedAt[`${id}-${byteIdx}`]
-    return t !== undefined && Date.now() - t < 1200
-  }
+  // A value cell flashes when it changes: we re-`key` it by its current value so
+  // React remounts it and the one-shot `.cell-flash` CSS animation replays. This
+  // keeps the component pure (no refs/clock reads during render).
 
   return (
     <div className="min-h-screen bg-white text-gray-900 dark:bg-[#1a1a1a] dark:text-white">
@@ -114,7 +92,7 @@ export default function CanInspector() {
                 <div key={byteIdx} className="bg-black/[0.03] border border-black/10 rounded-xl p-3 dark:bg-white/[0.03] dark:border-white/10">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Byte {byteIdx}</span>
-                    <span className={`font-mono text-xs px-2 py-0.5 rounded ${flashing(DIGIN_ID, byteIdx) ? 'bg-yellow-300 text-black' : 'bg-black/10 dark:bg-white/10'}`}>
+                    <span key={digin[byteIdx] ?? 0} className="cell-flash font-mono text-xs px-2 py-0.5 rounded bg-black/10 dark:bg-white/10">
                       0x{(digin[byteIdx] ?? 0).toString(16).padStart(2, '0').toUpperCase()}
                     </span>
                   </div>
@@ -167,7 +145,8 @@ export default function CanInspector() {
                       {bytes.map((b, i) => (
                         <td key={i} className="text-center px-1 py-1.5">
                           <span
-                            className={`inline-block font-mono rounded px-1 ${flashing(id, i) ? 'bg-yellow-300 text-black font-bold' : ''}`}
+                            key={b}
+                            className="cell-flash inline-block font-mono rounded px-1"
                             title={`0b${b.toString(2).padStart(8, '0')}`}
                           >
                             {b.toString(2).padStart(8, '0')}

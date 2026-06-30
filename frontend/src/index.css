@@ -30,3 +30,14 @@ body {
 .logo-bounce {
   animation: logo-bounce 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
+
+/* One-shot highlight when a CAN byte changes (CAN Inspector). The element is
+   re-keyed by value so it remounts and replays this animation on each change. */
+@keyframes cell-flash {
+  from { background-color: rgb(253 224 71); color: #000; }
+  to   { background-color: transparent; }
+}
+.cell-flash {
+  animation: cell-flash 1s ease-out;
+  border-radius: 4px;
+}
