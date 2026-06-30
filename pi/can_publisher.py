@@ -29,22 +29,54 @@ BACKEND_WS_URL = os.environ["BACKEND_WS_URL"]  # Required — fail fast if missi
 CAN_CHANNEL = os.getenv("CAN_CHANNEL", "can0") # test
 RECONNECT_DELAY = 2  # seconds between reconnection attempts
 
+# Outbound control commands. All share arbitration ID 0x0CFF101E (extended); the
+# first data byte selects the action. This is the same frame the physical panel
+# would generate, so the stand treats web and panel commands identically.
+COMMAND_ID = 0x0CFF101E
+COMMAND_FRAMES = {
+    "start": [1, 0, 0, 0, 0, 0, 0, 0],
+    "stop":  [2, 0, 0, 0, 0, 0, 0, 0],
+    "estop": [4, 0, 0, 0, 0, 0, 0, 0],
+}
+
 
 async def publish_can_frames(ws):
     """Read CAN frames and send decoded live updates to the backend."""
     bus = can.interface.Bus(channel=CAN_CHANNEL, bustype="socketcan")
     logger.info("Connected to CAN interface on %s", CAN_CHANNEL)
 
-    async def drain_incoming():
-        """Discard any messages sent by the backend (e.g. keepalives)."""
+    loop = asyncio.get_event_loop()
+
+    def transmit_command(frame):
+        """Blocking CAN send — run in the executor so the loop never stalls."""
         try:
-            async for _ in ws:
-                pass
+            bus.send(can.Message(
+                arbitration_id=COMMAND_ID, data=frame, is_extended_id=True,
+            ))
+        except can.CanError as e:
+            logger.error("Failed to send command frame %s: %s", frame, e)
+
+    async def handle_incoming():
+        """Process messages from the backend. Commands are transmitted onto the
+        CAN bus; keepalives and anything unrecognised are ignored."""
+        try:
+            async for raw in ws:
+                try:
+                    msg = json.loads(raw)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+                if msg.get("type") != "command":
+                    continue  # keepalives etc.
+                frame = COMMAND_FRAMES.get(msg.get("action"))
+                if frame is None:
+                    logger.warning("Unknown command action: %s", msg.get("action"))
+                    continue
+                logger.info("Transmitting %s command on CAN", msg.get("action"))
+                await loop.run_in_executor(None, transmit_command, frame)
         except Exception:
             pass
 
-    drain_task = asyncio.create_task(drain_incoming())
-    loop = asyncio.get_event_loop()
+    drain_task = asyncio.create_task(handle_incoming())
 
     try:
         while True:

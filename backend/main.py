@@ -15,7 +15,7 @@ from backend.db.database import init_db
 from backend.services import data_store
 from backend.services.csv_logger import run_logger
 from backend.services.debug_logger import run_debug_logger
-from backend.routes import data, settings, export, files, debug_export, backups
+from backend.routes import data, settings, export, files, debug_export, backups, commands
 
 logging.basicConfig(
     level=logging.INFO,
@@ -72,6 +72,7 @@ app.include_router(export.router)
 app.include_router(files.router)
 app.include_router(backups.router)
 app.include_router(debug_export.router)
+app.include_router(commands.router)
 
 
 @app.get("/health")
@@ -116,6 +117,7 @@ async def ws_pi(websocket: WebSocket):
     timing out the connection due to no outbound traffic.
     """
     await websocket.accept()
+    data_store.pi_connection = websocket
     logger.info("Pi connected from %s", websocket.client)
 
     async def send_keepalive():
@@ -143,6 +145,10 @@ async def ws_pi(websocket: WebSocket):
         logger.warning("Pi disconnected")
     finally:
         keepalive_task.cancel()
+        # Only clear if this is still the active connection — a fast reconnect
+        # may have already stored a newer socket.
+        if data_store.pi_connection is websocket:
+            data_store.pi_connection = None
 
 
 # ── WebSocket: Backend → Browser ─────────────────────────────────────────────

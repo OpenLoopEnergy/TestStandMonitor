@@ -4,6 +4,7 @@ import { SignalCard } from '../components/SignalCard'
 import { LiveChart } from '../components/LiveChart'
 import { DataTable } from '../components/DataTable'
 import { HeaderInfoPanel } from '../components/HeaderInfoPanel'
+import { ControlPanel } from '../components/ControlPanel'
 import { ThemeToggle } from '../components/ThemeToggle'
 import type { ChartSignal, LiveData, LogRow, SignalPoint } from '../types/signals'
 
@@ -438,12 +439,15 @@ export default function Dashboard() {
       <div className="flex flex-1 min-h-0 gap-3 p-3">
 
         {/* ── Left panel: signals (1/4 width, full height) ── */}
-        <div className="w-1/4 shrink-0 flex flex-col gap-2 min-h-0">
+        <div className="w-1/4 shrink-0 flex flex-col gap-1.5 min-h-0">
+
+          {/* Control — visible to all; only admins can issue commands */}
+          <ControlPanel data={data} piConnected={piConnected} isAdmin={isAdmin} onToast={showToast} />
 
           {/* System state */}
           <div className="shrink-0">
-            <p className="text-xs text-gray-500 uppercase tracking-widest mb-1.5 dark:text-white/50">System State</p>
-            <div className="grid grid-cols-2 gap-1.5">
+            <p className="text-xs text-gray-500 uppercase tracking-widest mb-1 dark:text-white/50">System State</p>
+            <div className="grid grid-cols-2 gap-1">
               <SignalCard label="SP"       value={`${data.sp} RPM`} />
               <SignalCard label="TP"       value={tp_pct} />
               <SignalCard label="Cycle"    value={`${data.cycle}`} />
@@ -451,7 +455,7 @@ export default function Dashboard() {
               <SignalCard label="LC Reg"   value={data.lcRegulate ? 'ON' : 'OFF'} />
               <SignalCard label="Trending" value={data.trending ? 'YES' : 'NO'} />
             </div>
-            <div className="mt-1.5 bg-black/5 border border-black/10 rounded-lg px-3 py-1.5 dark:bg-white/5 dark:border-white/10">
+            <div className="mt-1 bg-black/5 border border-black/10 rounded-lg px-3 py-1 dark:bg-white/5 dark:border-white/10">
               <span className="text-xs text-gray-600 dark:text-gray-400">Step: </span>
               <span className="text-xs text-gray-700 dark:text-white/80">{data.step || '—'}</span>
             </div>
@@ -460,7 +464,7 @@ export default function Dashboard() {
           {/* Sensors — fills remaining height, rows distributed evenly */}
           <div className="flex-1 flex flex-col min-h-0 gap-1">
             <p className="text-xs text-gray-500 uppercase tracking-widest shrink-0 dark:text-white/50">Sensors</p>
-            <div className="flex-1 grid grid-cols-2 gap-1.5 [grid-auto-rows:1fr]">
+            <div className="flex-1 grid grid-cols-2 gap-1 [grid-auto-rows:1fr] min-h-0 [&>*]:min-h-0 [&>*]:overflow-hidden">
               {([
                 ['S1',         `${data.s1} RPM`],
                 ['T1',         `${(data.t1 * 0.1).toFixed(1)} °F`],

@@ -93,6 +93,10 @@ log_manual: bool = False
 # All active frontend WebSocket connections
 frontend_connections: set[Any] = set()
 
+# The single active Pi WebSocket connection — used to push commands down to the
+# stand (start/stop/e-stop). None when no Pi is connected.
+pi_connection: Any | None = None
+
 # Lock for thread-safe updates
 _lock = asyncio.Lock()
 
@@ -114,3 +118,19 @@ async def broadcast(data: dict[str, Any]) -> None:
         except Exception:
             dead.add(ws)
     frontend_connections.difference_update(dead)
+
+
+async def send_to_pi(msg: dict[str, Any]) -> bool:
+    """Push a message down to the connected Pi (e.g. a control command).
+
+    Returns True if the message was sent, False if no Pi is connected or the
+    send failed (in which case the stale connection is cleared)."""
+    global pi_connection
+    if pi_connection is None:
+        return False
+    try:
+        await pi_connection.send_json(msg)
+        return True
+    except Exception:
+        pi_connection = None
+        return False
