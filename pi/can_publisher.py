@@ -78,6 +78,11 @@ async def publish_can_frames(ws):
 
     drain_task = asyncio.create_task(handle_incoming())
 
+    # Diagnostic: latest raw 8 bytes seen per CAN ID, keyed by 8-char hex string.
+    # Forwarded as "can_raw" so the web CAN Inspector can show which bit changes
+    # when a physical button is pressed (used to verify signal mapping).
+    raw_map: dict[str, list[int]] = {}
+
     try:
         while True:
             # Run blocking bus.recv() in a thread so the event loop stays free
@@ -91,14 +96,23 @@ async def publish_can_frames(ws):
                 "timestamp": msg.timestamp,
             })
 
-            if not decoded or decoded == 0:
+            # Our own outbound command frames decode to 0 — never echo those.
+            if decoded == 0:
                 continue
 
-            live_frame = decoded_to_live_frame(decoded)
-            if live_frame is None:
-                continue
+            out: dict = {}
 
-            await ws.send(json.dumps({"type": "frame", "data": live_frame}))
+            # Capture raw bytes for every real message (known or not) for the inspector.
+            raw_map[f"{msg.arbitration_id:08X}"] = list(msg.data)
+            out["can_raw"] = dict(raw_map)
+
+            # Add the decoded live-display fields when this message contributes any.
+            if decoded:
+                live_frame = decoded_to_live_frame(decoded)
+                if live_frame:
+                    out.update(live_frame)
+
+            await ws.send(json.dumps({"type": "frame", "data": out}))
 
     except can.CanError as e:
         logger.error("CAN bus error: %s", e)

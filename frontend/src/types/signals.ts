@@ -111,6 +111,9 @@ export interface LiveData {
   // Port diagnostics
   m1_ports?: M1PortsData
   m2_ports?: M2PortsData
+
+  // Diagnostic: latest raw 8 bytes per CAN ID (hex string key), for the CAN Inspector
+  can_raw?: Record<string, number[]>
 }
 
 /** A single historical data point for the signal chart. */

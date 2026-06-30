@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Dashboard from './pages/Dashboard'
 import PastTests from './pages/PastTests'
 import Debug from './pages/Debug'
+import CanInspector from './pages/CanInspector'
 
 export default function App() {
   return (
@@ -10,6 +11,7 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/past-tests" element={<PastTests />} />
         <Route path="/debug" element={<Debug />} />
+        <Route path="/can-inspector" element={<CanInspector />} />
       </Routes>
     </BrowserRouter>
   )

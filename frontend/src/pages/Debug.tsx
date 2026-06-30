@@ -304,6 +304,9 @@ export default function Debug() {
             {piConnected ? `● Pi  ${fps} fps` : '○ Raspberry Pi'}
           </span>
           <ThemeToggle />
+          <a href="/can-inspector" className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1.5 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">
+            CAN Inspector
+          </a>
           <a href="/" className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1.5 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">
             ← Dashboard
           </a>
