@@ -12,7 +12,7 @@ const DEFAULT_DATA: LiveData = {
   m2_tp9a_dir: 0,
   ee_dir_switch: 0,
   pi_connected: false,
-  debug_mode: false,
+  debug_mode: true,
   log_manual: false,
 }
 

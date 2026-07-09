@@ -22,18 +22,23 @@ const ACTION_LABELS: Record<Action, string> = {
  * from the live decoded signals (not from what was clicked here), so pressing
  * the physical panel button lights the matching button too.
  */
-export function ControlPanel({ data, piConnected, isAdmin, onToast }: ControlPanelProps) {
+export function ControlPanel({ data, piConnected, onToast }: ControlPanelProps) {
   const [pending, setPending] = useState<Action | null>(null)
   const [busy, setBusy] = useState(false)
 
-  // Everyone sees the live state; only admins can actually issue commands.
-  const canControl = isAdmin && piConnected && !busy
+  // Command issuing is temporarily disabled — everyone (including admins) can see
+  // the live Start/Stop/E-Stop state (via `lit` below) but nobody can click to send
+  // a command right now. To re-enable, restore: isAdmin && piConnected && !busy
+  const canControl = false
 
-  // Lit state comes from the live frame: latched machine state OR the momentary
-  // input switch (so a physical press flashes the button immediately).
+  // Lit state comes from the live frame. Start/Stop use the latched machine-state
+  // bit OR their momentary (normally-open) input switch, so a physical press also
+  // flashes the button. E-Stop uses ONLY the E_Stopped state bit (Byte 7 bit 4):
+  // the eStop_sw input is normally-closed (reads 1 when NOT pressed), so including
+  // it would keep the button lit permanently.
   const startLit = !!(data.started || data.start_btn)
   const stopLit = !!(data.stopped || data.stop_sw)
-  const estopLit = !!(data.e_stopped || data.estop_sw)
+  const estopLit = !!data.e_stopped
 
   async function send(action: Action) {
     setBusy(true)
@@ -103,9 +108,9 @@ export function ControlPanel({ data, piConnected, isAdmin, onToast }: ControlPan
       </div>
       {!piConnected ? (
         <p className="text-[9px] text-gray-400 mt-0.5 leading-tight">Pi offline — controls disabled</p>
-      ) : !isAdmin ? (
-        <p className="text-[9px] text-gray-400 mt-0.5 leading-tight">Live status — admin required to control</p>
-      ) : null}
+      ) : (
+        <p className="text-[9px] text-gray-400 mt-0.5 leading-tight">Live status — command issuing is temporarily disabled</p>
+      )}
 
       {/* Confirmation modal */}
       {pending && (

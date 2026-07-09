@@ -98,15 +98,8 @@ Vite proxies all API calls and WebSocket connections to port 8000, so no extra c
 2. Click **Export Data** in the UI.
 3. An `.xlsx` file is saved to the `exports/` folder in the project root and downloaded by the browser.
 
-To enable debug mode (logs every 0.5 s regardless of trending state):
-
-```powershell
-# Via the UI: click the Debug toggle in the header (Admin mode required)
-
-# Or call the API directly:
-Invoke-RestMethod -Method Post -Uri http://localhost:8000/set_debug_mode `
-  -ContentType "application/json" -Body '{"enabled": true}'
-```
+Debug mode (logs every 0.5 s in Automatic mode regardless of trending state) is always on —
+there's no UI toggle. The export still filters down to `trending == 1` rows for graphing.
 
 ---
 

@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useLiveData } from '../hooks/useLiveData'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { HeaderGroup, HeaderDivider } from '../components/HeaderGroup'
+
+const ADMIN_KEY = 'teststand_admin'
 
 interface FileInfo {
   filename: string
@@ -260,6 +264,8 @@ function BackupTable({
 }
 
 export default function PastTests() {
+  const { connected, piConnected } = useLiveData()
+  const [isAdmin] = useState<boolean>(() => sessionStorage.getItem(ADMIN_KEY) === 'true')
   const [files, setFiles] = useState<FileInfo[]>([])
   const [backups, setBackups] = useState<BackupInfo[]>([])
   const [activeTab, setActiveTab] = useState<'results' | 'backups'>('results')
@@ -436,14 +442,43 @@ export default function PastTests() {
             <h1 className="text-xl font-bold">Past Tests</h1>
             <p className="text-sm text-gray-500 mt-1">Previously exported test results and data table backups.</p>
           </div>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <a href="/debug" className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1.5 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">
-              Debug
-            </a>
-            <a href="/" className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1.5 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">
-              ← Dashboard
-            </a>
+          <div className="flex items-center gap-4">
+            <HeaderGroup label="Status">
+              {isAdmin && (
+                <span className="text-xs px-2 py-1 rounded-full font-bold bg-amber-100 text-amber-700 border border-amber-300 dark:bg-amber-900/60 dark:text-amber-300 dark:border-amber-700/50">
+                  Admin
+                </span>
+              )}
+              <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                connected ? 'bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300'
+              }`}>
+                {connected ? '● Backend' : '○ Backend'}
+              </span>
+              <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                piConnected ? 'bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300'
+              }`}>
+                {piConnected ? '● Raspberry Pi' : '○ Raspberry Pi'}
+              </span>
+            </HeaderGroup>
+
+            <HeaderDivider />
+
+            <HeaderGroup label="Actions">
+              <ThemeToggle />
+            </HeaderGroup>
+
+            <HeaderDivider />
+
+            <HeaderGroup label="Pages">
+              {isAdmin && (
+                <a href="/debug" className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1.5 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">
+                  Debug
+                </a>
+              )}
+              <a href="/" className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1.5 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">
+                ← Dashboard
+              </a>
+            </HeaderGroup>
           </div>
         </div>
 

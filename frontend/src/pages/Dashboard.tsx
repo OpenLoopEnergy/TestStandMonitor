@@ -6,6 +6,7 @@ import { DataTable } from '../components/DataTable'
 import { HeaderInfoPanel } from '../components/HeaderInfoPanel'
 import { ControlPanel } from '../components/ControlPanel'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { HeaderGroup, HeaderDivider } from '../components/HeaderGroup'
 import type { ChartSignal, LiveData, LogRow, SignalPoint } from '../types/signals'
 
 const COMPUTED_SIGNALS: ChartSignal[] = ['TheoFlow', 'EfficiencyA', 'EfficiencyB']
@@ -117,14 +118,6 @@ export default function Dashboard() {
     const id = setTimeout(() => setLogoBounce(false), 600)
     return () => clearTimeout(id)
   }, [logoBounce])
-
-  async function handleDebugToggle() {
-    await fetch('/set_debug_mode', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enabled: !data.debug_mode }),
-    })
-  }
 
   async function handleLogManualToggle() {
     if (!data.log_manual) {
@@ -327,9 +320,7 @@ export default function Dashboard() {
             <h2 className="text-xl font-bold text-center mb-2 text-gray-900 dark:text-white">Enable Manual Logging?</h2>
             <p className="text-sm text-gray-600 text-center mb-6 dark:text-gray-400">
               Rows will be logged every{' '}
-              <span className="font-bold text-gray-900 dark:text-white">
-                {data.debug_mode ? '0.5s' : '5s'}
-              </span>{' '}
+              <span className="font-bold text-gray-900 dark:text-white">0.5s</span>{' '}
               while the machine is in Manual mode. This can fill the table quickly.
               Clear the table before starting a test to keep results clean.
             </p>
@@ -364,74 +355,74 @@ export default function Dashboard() {
           </div>
           <span className="text-lg font-bold tracking-tight text-gray-900 dark:text-white/90">Test Stand Monitor</span>
         </div>
-        <div className="flex items-center gap-3">
-          {isAdmin && (
-            <span className="text-xs px-2 py-1 rounded-full font-bold bg-amber-100 text-amber-700 border border-amber-300 dark:bg-amber-900/60 dark:text-amber-300 dark:border-amber-700/50">
-              Admin
+        <div className="flex items-center gap-4">
+          <HeaderGroup label="Status">
+            {isAdmin && (
+              <span className="text-xs px-2 py-1 rounded-full font-bold bg-amber-100 text-amber-700 border border-amber-300 dark:bg-amber-900/60 dark:text-amber-300 dark:border-amber-700/50">
+                Admin
+              </span>
+            )}
+            {/* Mode — prominent */}
+            <span className={`text-sm px-3 py-1 rounded-full font-bold border ${
+              isAutomatic
+                ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/60 dark:text-blue-300 dark:border-blue-700'
+                : 'bg-black/5 text-gray-600 border-black/10 dark:bg-white/5 dark:text-gray-300 dark:border-white/10'
+            }`}>
+              {isAutomatic ? '⚙ Automatic' : '✋ Manual'}
             </span>
-          )}
-          {isAdmin && (
-            <button
-              onClick={handleDebugToggle}
-              className={`cursor-pointer text-sm px-4 py-2 rounded-full font-bold border transition-colors ${
-                data.debug_mode
-                  ? 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/60 dark:text-orange-300 dark:border-orange-700/50'
-                  : 'bg-black/5 text-gray-600 border-black/10 hover:bg-black/10 dark:bg-white/5 dark:text-gray-400 dark:border-white/10 dark:hover:bg-white/10'
-              }`}
-            >
-              {data.debug_mode ? '● Debug' : '○ Debug'}
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              onClick={handleLogManualToggle}
-              className={`cursor-pointer text-sm px-4 py-2 rounded-full font-bold border transition-colors ${
-                data.log_manual
-                  ? 'bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-900/60 dark:text-teal-300 dark:border-teal-700/50'
-                  : 'bg-black/5 text-gray-600 border-black/10 hover:bg-black/10 dark:bg-white/5 dark:text-gray-400 dark:border-white/10 dark:hover:bg-white/10'
-              }`}
-            >
-              {data.log_manual ? '● Log Manual' : '○ Log Manual'}
-            </button>
-          )}
-          {/* Mode — prominent */}
-          <span className={`text-sm px-3 py-1 rounded-full font-bold border ${
-            isAutomatic
-              ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/60 dark:text-blue-300 dark:border-blue-700'
-              : 'bg-black/5 text-gray-600 border-black/10 dark:bg-white/5 dark:text-gray-300 dark:border-white/10'
-          }`}>
-            {isAutomatic ? '⚙ Automatic' : '✋ Manual'}
-          </span>
-          <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-            connected ? 'bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300'
-          }`}>
-            {connected ? '● Backend' : '○ Backend'}
-          </span>
-          <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-            piConnected ? 'bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300'
-          }`}>
-            {piConnected ? '● Raspberry Pi' : '○ Raspberry Pi'}
-          </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            {data.trending === 1
-              ? <span className="text-yellow-600 font-semibold dark:text-yellow-400">● Trending</span>
-              : <span className="text-gray-400 dark:text-gray-500">○ Idle</span>}
-          </span>
-          <ThemeToggle />
-          {isAdmin && (
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+              connected ? 'bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300'
+            }`}>
+              {connected ? '● Backend' : '○ Backend'}
+            </span>
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+              piConnected ? 'bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300'
+            }`}>
+              {piConnected ? '● Raspberry Pi' : '○ Raspberry Pi'}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {data.trending === 1
+                ? <span className="text-yellow-600 font-semibold dark:text-yellow-400">● Trending</span>
+                : <span className="text-gray-400 dark:text-gray-500">○ Idle</span>}
+            </span>
+          </HeaderGroup>
+
+          <HeaderDivider />
+
+          <HeaderGroup label="Actions">
+            {isAdmin && (
+              <button
+                onClick={handleLogManualToggle}
+                className={`cursor-pointer text-sm px-4 py-2 rounded-full font-bold border transition-colors ${
+                  data.log_manual
+                    ? 'bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-900/60 dark:text-teal-300 dark:border-teal-700/50'
+                    : 'bg-black/5 text-gray-600 border-black/10 hover:bg-black/10 dark:bg-white/5 dark:text-gray-400 dark:border-white/10 dark:hover:bg-white/10'
+                }`}
+              >
+                {data.log_manual ? '● Log Manual' : '○ Log Manual'}
+              </button>
+            )}
+            <ThemeToggle />
+          </HeaderGroup>
+
+          <HeaderDivider />
+
+          <HeaderGroup label="Pages">
+            {isAdmin && (
+              <a
+                href="/debug"
+                className="cursor-pointer text-sm bg-black/10 hover:bg-black/20 text-gray-900 px-4 py-2 rounded-lg font-semibold transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white"
+              >
+                Debug
+              </a>
+            )}
             <a
-              href="/debug"
-              className="cursor-pointer text-sm bg-black/10 hover:bg-black/20 text-gray-900 px-4 py-2 rounded-lg font-semibold transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white"
+              href="/past-tests"
+              className="cursor-pointer text-base bg-black/10 hover:bg-black/20 text-gray-900 px-5 py-2.5 rounded-lg font-semibold transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white"
             >
-              Debug
+              Past Tests
             </a>
-          )}
-          <a
-            href="/past-tests"
-            className="cursor-pointer text-base bg-black/10 hover:bg-black/20 text-gray-900 px-5 py-2.5 rounded-lg font-semibold transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white"
-          >
-            Past Tests
-          </a>
+          </HeaderGroup>
         </div>
       </div>
 

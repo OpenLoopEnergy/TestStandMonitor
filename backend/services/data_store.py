@@ -20,7 +20,7 @@ latest: dict[str, Any] = {
     "f1": 0, "f2": 0, "f3": 0,
     "p1": 0, "p2": 0, "p3": 0, "p4": 0, "p5": 0,
     "pi_connected": False,
-    "debug_mode": False,
+    "debug_mode": True,
     "log_manual": False,
     "tp_reved": 0,
     "m2_tp9a_dir": 0,
@@ -84,8 +84,10 @@ last_pi_frame_at: float = 0.0
 # Raw frame counter — incremented by the Pi WS handler, reset by the watchdog every 2 s
 _frame_count: int = 0
 
-# Debug logging mode — when True, logs every tick in Automatic mode regardless of trending
-debug_mode: bool = False
+# Debug logging mode — when True, logs every tick in Automatic mode regardless of trending.
+# Forced on permanently (no UI toggle) so automatic-test data is fully captured; the
+# export filters back down to trending == 1 rows for graphing.
+debug_mode: bool = True
 
 # Log Manual mode — when True, also logs while the machine is in Manual mode (pb4 != 0)
 log_manual: bool = False

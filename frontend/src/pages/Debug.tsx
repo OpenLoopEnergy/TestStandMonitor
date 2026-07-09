@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLiveData } from '../hooks/useLiveData'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { HeaderGroup, HeaderDivider } from '../components/HeaderGroup'
 import { LiveChart } from '../components/LiveChart'
 import type { M1PortsData, M2PortsData, SignalPoint } from '../types/signals'
 
@@ -285,34 +286,54 @@ export default function Debug() {
             <p className="text-xs text-gray-500 dark:text-gray-400">Diagnostics &amp; live signal monitor — admin only</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className={`text-sm px-3 py-1 rounded-full font-bold border ${
-            isAutomatic
-              ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/60 dark:text-blue-300 dark:border-blue-700'
-              : 'bg-black/5 text-gray-600 border-black/10 dark:bg-white/5 dark:text-gray-300 dark:border-white/10'
-          }`}>
-            {isAutomatic ? '⚙ Automatic' : '✋ Manual'}
-          </span>
-          <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-            connected ? 'bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300'
-          }`}>
-            {connected ? '● Backend' : '○ Backend'}
-          </span>
-          <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-            piConnected ? 'bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300'
-          }`}>
-            {piConnected ? `● Pi  ${fps} fps` : '○ Raspberry Pi'}
-          </span>
-          <ThemeToggle />
-          <a href="/can-inspector" className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1.5 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">
-            CAN Inspector
-          </a>
-          <a href="/" className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1.5 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">
-            ← Dashboard
-          </a>
-          <a href="/past-tests" className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1.5 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">
-            Past Tests
-          </a>
+        <div className="flex items-center gap-4">
+          <HeaderGroup label="Status">
+            <span className="text-xs px-2 py-1 rounded-full font-bold bg-amber-100 text-amber-700 border border-amber-300 dark:bg-amber-900/60 dark:text-amber-300 dark:border-amber-700/50">
+              Admin
+            </span>
+            <span className={`text-sm px-3 py-1 rounded-full font-bold border ${
+              isAutomatic
+                ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/60 dark:text-blue-300 dark:border-blue-700'
+                : 'bg-black/5 text-gray-600 border-black/10 dark:bg-white/5 dark:text-gray-300 dark:border-white/10'
+            }`}>
+              {isAutomatic ? '⚙ Automatic' : '✋ Manual'}
+            </span>
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+              connected ? 'bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300'
+            }`}>
+              {connected ? '● Backend' : '○ Backend'}
+            </span>
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+              piConnected ? 'bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300'
+            }`}>
+              {piConnected ? `● Pi  ${fps} fps` : '○ Raspberry Pi'}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {data.trending === 1
+                ? <span className="text-yellow-600 font-semibold dark:text-yellow-400">● Trending</span>
+                : <span className="text-gray-400 dark:text-gray-500">○ Idle</span>}
+            </span>
+          </HeaderGroup>
+
+          <HeaderDivider />
+
+          <HeaderGroup label="Actions">
+            <ThemeToggle />
+          </HeaderGroup>
+
+          <HeaderDivider />
+
+          <HeaderGroup label="Pages">
+            <a href="/can-inspector" className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1.5 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">
+              CAN Inspector
+            </a>
+            <a href="/" className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1.5 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">
+              ← Dashboard
+            </a>
+            <a href="/past-tests" className="text-xs bg-black/10 hover:bg-black/20 text-gray-900 px-3 py-1.5 rounded-lg transition-colors dark:bg-white/10 dark:hover:bg-white/20 dark:text-white">
+              Past Tests
+            </a>
+          </HeaderGroup>
         </div>
       </div>
 
