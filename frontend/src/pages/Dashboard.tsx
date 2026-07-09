@@ -41,7 +41,7 @@ function getLiveValue(signal: ChartSignal, d: LiveData): number | null {
 export default function Dashboard() {
   const { data, connected, piConnected } = useLiveData()
   const [inputFactor, setInputFactor] = useState(1.0)
-  const [activeSignals, setActiveSignals] = useState<ChartSignal[]>(['S1'])
+  const [activeSignals, setActiveSignals] = useState<ChartSignal[]>(['EfficiencyA', 'EfficiencyB'])
   const [historyPoints, setHistoryPoints] = useState<SignalPoint[]>([])
   const [theoFlowHistory, setTheoFlowHistory] = useState<SignalPoint[]>([])
   const [efficiencyAHistory, setEfficiencyAHistory] = useState<SignalPoint[]>([])
